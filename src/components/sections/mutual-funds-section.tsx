@@ -48,19 +48,23 @@ const MONTHS: Record<string, string> = {
     jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
 };
 // "11-Sep-2026" -> "2026-09-11"
-function amfiDateToIso(value: string | undefined): string | null {
-    const match = (value ?? "").trim().match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/);
+function amfiDateToIso(value: string | null | undefined): string | null {
+    if (!value) return null;
+    const match = String(value).trim().match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/);
     const month = match ? MONTHS[match[2].toLowerCase()] : undefined;
     return match && month ? `${match[3]}-${month}-${match[1].padStart(2, "0")}` : null;
 }
-function toNumber(value: string | null | undefined): number | null {
-    if (value == null || value.trim() === "")
-        return null;
-    const num = Number(value.replace(/,/g, ""));
+function toNumber(value: string | number | null | undefined): number | null {
+    if (value == null) return null;
+    if (typeof value === "number") return Number.isFinite(value) ? value : null;
+    const str = String(value).trim();
+    if (str === "" || str === "-") return null;
+    const num = Number(str.replace(/,/g, ""));
     return Number.isFinite(num) ? num : null;
 }
 function cleanIsin(value: string | null | undefined): string | null {
-    const v = (value ?? "").trim();
+    if (value == null) return null;
+    const v = String(value).trim();
     return v === "" || v === "-" ? null : v;
 }
 // "Open Ended Schemes(Equity Scheme - Large Cap Fund)" -> Equity, "Large Cap Fund".
