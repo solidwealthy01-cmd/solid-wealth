@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
   Calculator,
@@ -136,6 +136,11 @@ const InputSlider = ({ label, value, min, max, step = 1, onChange, prefix = "", 
 };
 
 const ChartRenderer = ({ type, val1, val2, label1, label2, totalLabel, totalValue, subtext }: any) => {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const steps = 15;
   const chartData = Array.from({ length: steps }).map((_, i) => {
     const progress = (i + 1) / steps;
@@ -179,21 +184,25 @@ const ChartRenderer = ({ type, val1, val2, label1, label2, totalLabel, totalValu
 
   if (type === 'bar') {
     return (
-      <div className="w-full h-full flex flex-col">
+      <div className="w-full min-w-0 h-full flex flex-col">
         <h4 className="font-bold text-[#1a2332] mb-1">Year-wise Breakdown</h4>
         <p className="text-xs text-gray-500 mb-6">{label1} and {label2} over time</p>
-        <div className="w-full h-[250px] min-h-[250px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={formatYAxis} />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
-              <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
-              <Bar dataKey={label1} stackId="a" fill="#fde68a" radius={[0, 0, 4, 4]} />
-              <Bar dataKey={label2} stackId="a" fill="#fe9800" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="w-full min-w-0 h-[250px] min-h-[250px]">
+          {mounted ? (
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+              <BarChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={formatYAxis} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
+                <Bar dataKey={label1} stackId="a" fill="#fde68a" radius={[0, 0, 4, 4]} />
+                <Bar dataKey={label2} stackId="a" fill="#fe9800" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="w-full h-full bg-gray-50/50 rounded-xl animate-pulse" />
+          )}
         </div>
       </div>
     );
@@ -201,26 +210,30 @@ const ChartRenderer = ({ type, val1, val2, label1, label2, totalLabel, totalValu
 
   if (type === 'line') {
     return (
-      <div className="w-full h-full flex flex-col">
+      <div className="w-full min-w-0 h-full flex flex-col">
         <h4 className="font-bold text-[#1a2332] mb-1">Growth Trend</h4>
         <p className="text-xs text-gray-500 mb-6">Track your wealth accumulation</p>
-        <div className="w-full h-[250px] min-h-[250px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#fe9800" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#fe9800" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={formatYAxis} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
-              <Area type="monotone" dataKey="total" name="Total Value" stroke="#fe9800" strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" />
-            </AreaChart>
-          </ResponsiveContainer>
+        <div className="w-full min-w-0 h-[250px] min-h-[250px]">
+          {mounted ? (
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+              <AreaChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#fe9800" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#fe9800" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={formatYAxis} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
+                <Area type="monotone" dataKey="total" name="Total Value" stroke="#fe9800" strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="w-full h-full bg-gray-50/50 rounded-xl animate-pulse" />
+          )}
         </div>
       </div>
     );

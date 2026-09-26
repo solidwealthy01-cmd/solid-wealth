@@ -20,6 +20,11 @@ const COLORS = [
 ];
 
 export function MarketCapDonut({ distribution }: MarketCapProps) {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const data = [
     { name: "Large Cap", value: distribution.largeCap, color: "#2563eb" },
     { name: "Mid Cap", value: distribution.midCap, color: "#16a34a" },
@@ -35,34 +40,38 @@ export function MarketCapDonut({ distribution }: MarketCapProps) {
 
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4 flex-1">
         {/* Donut Chart */}
-        <div className="relative w-[180px] h-[180px]">
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-            <PieChart>
-              <Tooltip
-                formatter={(val: any) => [`${Number(val).toFixed(2)}%`, "Allocation"]}
-                contentStyle={{
-                  backgroundColor: "rgba(255, 255, 255, 0.95)",
-                  borderRadius: "10px",
-                  border: "1px solid #e5e7eb",
-                  fontSize: "12px",
-                  fontWeight: "bold",
-                }}
-              />
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={52}
-                outerRadius={80}
-                paddingAngle={3}
-                dataKey="value"
-              >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} stroke="#ffffff" strokeWidth={2} />
-                ))}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
+        <div className="relative w-[180px] h-[180px] min-w-0">
+          {mounted ? (
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+              <PieChart>
+                <Tooltip
+                  formatter={(val: any) => [`${Number(val).toFixed(2)}%`, "Allocation"]}
+                  contentStyle={{
+                    backgroundColor: "rgba(255, 255, 255, 0.95)",
+                    borderRadius: "10px",
+                    border: "1px solid #e5e7eb",
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                  }}
+                />
+                <Pie
+                  data={data}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={52}
+                  outerRadius={80}
+                  paddingAngle={3}
+                  dataKey="value"
+                >
+                  {data.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} stroke="#ffffff" strokeWidth={2} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="w-[180px] h-[180px] rounded-full bg-gray-50/50 animate-pulse" />
+          )}
         </div>
 
         {/* Legend */}

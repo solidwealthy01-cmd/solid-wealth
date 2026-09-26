@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
   TrendingUp,
@@ -304,6 +304,11 @@ function calculateStrategyTrajectory(strategy: StrategyConfig) {
 }
 
 export function CalculatorComparisonView() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [viewMode, setViewMode] = useState<"compare" | "combined">("combined");
   const [strategies, setStrategies] = useState<StrategyConfig[]>([
     {
@@ -865,104 +870,108 @@ export function CalculatorComparisonView() {
           </div>
         </div>
 
-        <div className="w-full h-[320px]">
-          <ResponsiveContainer width="100%" height="100%">
-            {chartView === "line" ? (
-              <LineChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis
-                  dataKey="year"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fill: "#94a3b8" }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fill: "#94a3b8" }}
-                  tickFormatter={(val) => {
-                    if (val >= 10000000) return `₹${(val / 10000000).toFixed(1)}Cr`;
-                    if (val >= 100000) return `₹${(val / 100000).toFixed(1)}L`;
-                    if (val >= 1000) return `₹${(val / 1000).toFixed(0)}K`;
-                    return `₹${val}`;
-                  }}
-                />
-                <Tooltip
-                  formatter={(value: any, name: any) => {
-                    const strat = computedStrategies.find((s) => s.id === name.replace("val_", ""));
-                    return [`₹${formatINR(Number(value))}`, strat?.title || name];
-                  }}
-                  contentStyle={{
-                    backgroundColor: "#ffffff",
-                    borderRadius: "12px",
-                    border: "1px solid #e2e8f0",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-                    fontSize: "12px",
-                  }}
-                />
-                <Legend
-                  formatter={(value) => {
-                    const strat = computedStrategies.find((s) => s.id === value.replace("val_", ""));
-                    return <span className="text-xs font-semibold text-gray-700">{strat?.title}</span>;
-                  }}
-                />
-                {computedStrategies.map((strat) => (
-                  <Line
-                    key={strat.id}
-                    type="monotone"
-                    dataKey={`val_${strat.id}`}
-                    name={`val_${strat.id}`}
-                    stroke={strat.color}
-                    strokeWidth={3}
-                    dot={{ r: 3 }}
-                    activeDot={{ r: 6 }}
+        <div className="w-full min-w-0 h-[320px]">
+          {mounted ? (
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+              {chartView === "line" ? (
+                <LineChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis
+                    dataKey="year"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: "#94a3b8" }}
                   />
-                ))}
-              </LineChart>
-            ) : (
-              <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis
-                  dataKey="year"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fill: "#94a3b8" }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fill: "#94a3b8" }}
-                  tickFormatter={(val) => {
-                    if (val >= 10000000) return `₹${(val / 10000000).toFixed(1)}Cr`;
-                    if (val >= 100000) return `₹${(val / 100000).toFixed(1)}L`;
-                    if (val >= 1000) return `₹${(val / 1000).toFixed(0)}K`;
-                    return `₹${val}`;
-                  }}
-                />
-                <Tooltip
-                  formatter={(value: any, name: any) => {
-                    const strat = computedStrategies.find((s) => s.id === name.replace("val_", ""));
-                    return [`₹${formatINR(Number(value))}`, strat?.title || name];
-                  }}
-                />
-                <Legend
-                  formatter={(value) => {
-                    const strat = computedStrategies.find((s) => s.id === value.replace("val_", ""));
-                    return <span className="text-xs font-semibold text-gray-700">{strat?.title}</span>;
-                  }}
-                />
-                {computedStrategies.map((strat) => (
-                  <Bar
-                    key={strat.id}
-                    dataKey={`val_${strat.id}`}
-                    name={`val_${strat.id}`}
-                    fill={strat.color}
-                    radius={[4, 4, 0, 0]}
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: "#94a3b8" }}
+                    tickFormatter={(val) => {
+                      if (val >= 10000000) return `₹${(val / 10000000).toFixed(1)}Cr`;
+                      if (val >= 100000) return `₹${(val / 100000).toFixed(1)}L`;
+                      if (val >= 1000) return `₹${(val / 1000).toFixed(0)}K`;
+                      return `₹${val}`;
+                    }}
                   />
-                ))}
-              </BarChart>
-            )}
-          </ResponsiveContainer>
+                  <Tooltip
+                    formatter={(value: any, name: any) => {
+                      const strat = computedStrategies.find((s) => s.id === name.replace("val_", ""));
+                      return [`₹${formatINR(Number(value))}`, strat?.title || name];
+                    }}
+                    contentStyle={{
+                      backgroundColor: "#ffffff",
+                      borderRadius: "12px",
+                      border: "1px solid #e2e8f0",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+                      fontSize: "12px",
+                    }}
+                  />
+                  <Legend
+                    formatter={(value) => {
+                      const strat = computedStrategies.find((s) => s.id === value.replace("val_", ""));
+                      return <span className="text-xs font-semibold text-gray-700">{strat?.title}</span>;
+                    }}
+                  />
+                  {computedStrategies.map((strat) => (
+                    <Line
+                      key={strat.id}
+                      type="monotone"
+                      dataKey={`val_${strat.id}`}
+                      name={`val_${strat.id}`}
+                      stroke={strat.color}
+                      strokeWidth={3}
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  ))}
+                </LineChart>
+              ) : (
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis
+                    dataKey="year"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: "#94a3b8" }}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: "#94a3b8" }}
+                    tickFormatter={(val) => {
+                      if (val >= 10000000) return `₹${(val / 10000000).toFixed(1)}Cr`;
+                      if (val >= 100000) return `₹${(val / 100000).toFixed(1)}L`;
+                      if (val >= 1000) return `₹${(val / 1000).toFixed(0)}K`;
+                      return `₹${val}`;
+                    }}
+                  />
+                  <Tooltip
+                    formatter={(value: any, name: any) => {
+                      const strat = computedStrategies.find((s) => s.id === name.replace("val_", ""));
+                      return [`₹${formatINR(Number(value))}`, strat?.title || name];
+                    }}
+                  />
+                  <Legend
+                    formatter={(value) => {
+                      const strat = computedStrategies.find((s) => s.id === value.replace("val_", ""));
+                      return <span className="text-xs font-semibold text-gray-700">{strat?.title}</span>;
+                    }}
+                  />
+                  {computedStrategies.map((strat) => (
+                    <Bar
+                      key={strat.id}
+                      dataKey={`val_${strat.id}`}
+                      name={`val_${strat.id}`}
+                      fill={strat.color}
+                      radius={[4, 4, 0, 0]}
+                    />
+                  ))}
+                </BarChart>
+              )}
+            </ResponsiveContainer>
+          ) : (
+            <div className="w-full h-full bg-gray-50/50 rounded-xl animate-pulse" />
+          )}
         </div>
       </div>
 

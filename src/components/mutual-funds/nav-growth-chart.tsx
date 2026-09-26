@@ -53,12 +53,20 @@ function monthEnds(data: NavGrowthChartProps["data"]) {
 }
 
 export function NavGrowthChart({ data }: NavGrowthChartProps) {
-  if (data.length < 2) return null;
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted || data.length < 2) {
+    return <div className="h-[300px] w-full min-w-0 rounded-2xl bg-gray-50/50 animate-pulse" />;
+  }
+
   const last = data[data.length - 1];
 
   return (
     <div className="space-y-3">
-      <div className="h-[300px] w-full">
+      <div className="h-[300px] w-full min-w-0">
         <ResponsiveContainer
           width="100%"
           height="100%"

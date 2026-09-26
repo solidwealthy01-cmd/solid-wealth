@@ -30,14 +30,20 @@ export function YearlyPerformanceChart({
   benchmarkName,
   categoryName,
 }: YearlyPerformanceChartProps) {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <div className="flex flex-col rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
       <h3 className="text-sm font-bold text-center text-[#1f2937] tracking-tight mb-6">
         Yearly Performance (%)
       </h3>
 
-      <div className="w-full h-[320px] sm:h-[360px]">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+      <div className="w-full min-w-0 h-[320px] sm:h-[360px]">
+        {mounted ? (
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <BarChart
             data={data}
             margin={{ top: 10, right: 10, left: -20, bottom: 20 }}
@@ -99,6 +105,9 @@ export function YearlyPerformanceChart({
             )}
           </BarChart>
         </ResponsiveContainer>
+        ) : (
+          <div className="w-full h-full bg-gray-50/50 rounded-xl animate-pulse" />
+        )}
       </div>
 
       {/* Legend matching Screenshot 3 */}

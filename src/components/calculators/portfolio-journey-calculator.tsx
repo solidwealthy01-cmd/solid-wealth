@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
   TrendingUp,
@@ -186,6 +186,11 @@ const PRESET_PORTFOLIOS: {
 ];
 
 export function PortfolioJourneyCalculator() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [initialCorpus, setInitialCorpus] = useState<number>(0);
   const [streams, setStreams] = useState<PortfolioStream[]>(PRESET_PORTFOLIOS[0].streams);
   const [horizonYears, setHorizonYears] = useState<number>(6);
@@ -761,79 +766,83 @@ export function PortfolioJourneyCalculator() {
               </div>
             </div>
 
-            <div className="w-full h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={simulation.chartTrajectory}
-                  margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="colorPortfolioG" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10B981" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#10B981" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis
-                    dataKey="label"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 11, fill: "#94a3b8" }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 11, fill: "#94a3b8" }}
-                    tickFormatter={(val) => {
-                      if (val >= 10000000) return `₹${(val / 10000000).toFixed(1)}Cr`;
-                      if (val >= 100000) return `₹${(val / 100000).toFixed(1)}L`;
-                      if (val >= 1000) return `₹${(val / 1000).toFixed(0)}K`;
-                      return `₹${val}`;
-                    }}
-                  />
-                  <Tooltip
-                    formatter={(value: any, name: any) => {
-                      if (name === "portfolioValue") return [`₹${formatINR(Number(value))}`, "Portfolio Value"];
-                      if (name === "cumulativeInvested") return [`₹${formatINR(Number(value))}`, "Total Invested"];
-                      if (name === "cumulativeWithdrawn") return [`₹${formatINR(Number(value))}`, "Total Withdrawn"];
-                      return [`₹${formatINR(Number(value))}`, name];
-                    }}
-                    contentStyle={{
-                      backgroundColor: "#ffffff",
-                      borderRadius: "12px",
-                      border: "1px solid #e2e8f0",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-                      fontSize: "12px",
-                    }}
-                  />
-                  <Legend
-                    formatter={(value) => {
-                      if (value === "portfolioValue") return <span className="text-xs font-bold text-gray-800">Portfolio Value</span>;
-                      if (value === "cumulativeInvested") return <span className="text-xs font-medium text-gray-500">Total Invested</span>;
-                      if (value === "cumulativeWithdrawn") return <span className="text-xs font-medium text-rose-500">Total Withdrawn</span>;
-                      return value;
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="portfolioValue"
-                    name="portfolioValue"
-                    stroke="#10B981"
-                    strokeWidth={3}
-                    fillOpacity={1}
-                    fill="url(#colorPortfolioG)"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="cumulativeInvested"
-                    name="cumulativeInvested"
-                    stroke="#0B63E5"
-                    strokeWidth={1.5}
-                    strokeDasharray="4 4"
-                    fill="none"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div className="w-full min-w-0 h-[280px]">
+              {mounted ? (
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                  <AreaChart
+                    data={simulation.chartTrajectory}
+                    margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient id="colorPortfolioG" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10B981" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#10B981" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis
+                      dataKey="label"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: "#94a3b8" }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: "#94a3b8" }}
+                      tickFormatter={(val) => {
+                        if (val >= 10000000) return `₹${(val / 10000000).toFixed(1)}Cr`;
+                        if (val >= 100000) return `₹${(val / 100000).toFixed(1)}L`;
+                        if (val >= 1000) return `₹${(val / 1000).toFixed(0)}K`;
+                        return `₹${val}`;
+                      }}
+                    />
+                    <Tooltip
+                      formatter={(value: any, name: any) => {
+                        if (name === "portfolioValue") return [`₹${formatINR(Number(value))}`, "Portfolio Value"];
+                        if (name === "cumulativeInvested") return [`₹${formatINR(Number(value))}`, "Total Invested"];
+                        if (name === "cumulativeWithdrawn") return [`₹${formatINR(Number(value))}`, "Total Withdrawn"];
+                        return [`₹${formatINR(Number(value))}`, name];
+                      }}
+                      contentStyle={{
+                        backgroundColor: "#ffffff",
+                        borderRadius: "12px",
+                        border: "1px solid #e2e8f0",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+                        fontSize: "12px",
+                      }}
+                    />
+                    <Legend
+                      formatter={(value) => {
+                        if (value === "portfolioValue") return <span className="text-xs font-bold text-gray-800">Portfolio Value</span>;
+                        if (value === "cumulativeInvested") return <span className="text-xs font-medium text-gray-500">Total Invested</span>;
+                        if (value === "cumulativeWithdrawn") return <span className="text-xs font-medium text-rose-500">Total Withdrawn</span>;
+                        return value;
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="portfolioValue"
+                      name="portfolioValue"
+                      stroke="#10B981"
+                      strokeWidth={3}
+                      fillOpacity={1}
+                      fill="url(#colorPortfolioG)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="cumulativeInvested"
+                      name="cumulativeInvested"
+                      stroke="#0B63E5"
+                      strokeWidth={1.5}
+                      strokeDasharray="4 4"
+                      fill="none"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="w-full h-full bg-gray-50/50 rounded-xl animate-pulse" />
+              )}
             </div>
           </div>
 
