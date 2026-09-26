@@ -22,8 +22,8 @@ import { FundAnalyticsSections } from "./fund-analytics-sections";
 
 interface SchemePerformanceDetailProps {
   category: string;
-  period: string;
   scheme: string;
+  period?: string;
 }
 
 type Status = "loading" | "ready" | "not-found" | "error";
@@ -59,8 +59,8 @@ function StripItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function SchemePerformanceDetail({ category, period, scheme }: SchemePerformanceDetailProps) {
-  const hasParams = Boolean(category && period && scheme);
+export function SchemePerformanceDetail({ category, scheme, period }: SchemePerformanceDetailProps) {
+  const hasParams = Boolean(category && scheme);
   const [rows, setRows] = useState<FundPerformance[]>([]);
   const [status, setStatus] = useState<Status>(hasParams ? "loading" : "not-found");
   const [reloadKey, setReloadKey] = useState(0);
@@ -69,10 +69,13 @@ export function SchemePerformanceDetail({ category, period, scheme }: SchemePerf
   const [analyticsReloadKey, setAnalyticsReloadKey] = useState(0);
 
   useEffect(() => {
-    if (!category || !period || !scheme) return;
+    if (!category || !scheme) return;
     const controller = new AbortController();
     const load = async () => {
-      const params = new URLSearchParams({ category, period });
+      const params = new URLSearchParams({ category });
+      if (period) {
+        params.set("period", period);
+      }
       try {
         const res = await fetch(`${API_BASE_URL}/api/mutual-fund-performance/?${params}`, {
           signal: controller.signal,
