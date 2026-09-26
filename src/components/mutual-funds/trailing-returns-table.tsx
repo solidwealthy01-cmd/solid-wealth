@@ -240,26 +240,100 @@ export function TrailingReturnsTable() {
     tableMessage = funds.length === 0 ? "No schemes in this category." : "No schemes match your search.";
   }
 
+  // Group categories by asset class
+  const [selectedGroup, setSelectedGroup] = useState<string>("All");
+
+  const categoryGroups = useMemo(() => {
+    const groups: Record<string, CategoryOption[]> = {
+      All: categories,
+      Equity: [],
+      Debt: [],
+      Hybrid: [],
+      Other: [],
+    };
+
+    for (const cat of categories) {
+      const name = cat.category.toLowerCase();
+      if (name.startsWith("equity")) {
+        groups.Equity.push(cat);
+      } else if (name.startsWith("debt")) {
+        groups.Debt.push(cat);
+      } else if (name.startsWith("hybrid")) {
+        groups.Hybrid.push(cat);
+      } else {
+        groups.Other.push(cat);
+      }
+    }
+    return groups;
+  }, [categories]);
+
+  const displayedCategories = useMemo(() => {
+    if (selectedGroup === "All") return categories;
+    return categoryGroups[selectedGroup] || categories;
+  }, [categories, selectedGroup, categoryGroups]);
+
   return (
     <div className="w-full space-y-4">
       {/* Category selector strip */}
       {categories.length > 1 && (
-        <div className="flex flex-wrap items-center gap-2 pb-1">
-          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Category:</span>
-          {categories.map((cat) => (
-            <button
-              key={cat.category}
-              onClick={() => setSelectedCategory(cat.category)}
-              className={cn(
-                "px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer",
-                selectedCategory === cat.category
-                  ? "bg-[#0B63E5] text-white shadow-xs"
-                  : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-              )}
-            >
-              {cat.category}
-            </button>
-          ))}
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-gray-100">
+            {/* Asset Class Filter Tabs */}
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              {["All", "Equity", "Debt", "Hybrid", "Other"].map((grp) => {
+                const count = grp === "All" ? categories.length : (categoryGroups[grp]?.length || 0);
+                if (count === 0 && grp !== "All") return null;
+                return (
+                  <button
+                    key={grp}
+                    onClick={() => setSelectedGroup(grp)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer whitespace-nowrap",
+                      selectedGroup === grp
+                        ? "bg-[#0B63E5] text-white shadow-xs"
+                        : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+                    )}
+                  >
+                    {grp} <span className="opacity-75 text-[10px]">({count})</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Quick dropdown for all categories */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-gray-500 whitespace-nowrap">Select:</span>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-gray-800 outline-none focus:border-[#0B63E5] cursor-pointer max-w-[220px]"
+              >
+                {categories.map((cat) => (
+                  <option key={cat.category} value={cat.category}>
+                    {cat.category}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Category Pills inside the selected group */}
+          <div className="flex flex-wrap items-center gap-1.5 max-h-36 overflow-y-auto pt-1">
+            {displayedCategories.map((cat) => (
+              <button
+                key={cat.category}
+                onClick={() => setSelectedCategory(cat.category)}
+                className={cn(
+                  "px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer",
+                  selectedCategory === cat.category
+                    ? "bg-[#0B63E5] text-white shadow-2xs"
+                    : "bg-gray-50 border border-gray-200/80 text-gray-700 hover:bg-orange-50 hover:border-orange-200"
+                )}
+              >
+                {cat.category}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
