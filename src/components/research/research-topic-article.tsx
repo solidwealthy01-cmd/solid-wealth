@@ -32,6 +32,8 @@ import {
   ResearchArticleToc,
   type ResearchArticleTocItem,
 } from "@/components/research/research-article-toc";
+import { getStoryForTopic } from "@/lib/course-stories";
+import { InteractiveLessonStory } from "@/components/research/interactive-lesson-story";
 
 type ResearchTopicArticleProps = {
   level: CourseLevel;
@@ -44,7 +46,11 @@ type ResearchTopicArticleProps = {
 
 const tableOfContents: ResearchArticleTocItem[] = [
   { id: "overview", label: "Topic overview" },
+  { id: "story-breakdown", label: "Real-life story" },
+  { id: "the-analogy", label: "Everyday analogy" },
   { id: "deep-dive", label: "Detailed explanation" },
+  { id: "interactive-dilemma", label: "Decision challenge" },
+  { id: "fun-facts", label: "Did you know?" },
   { id: "learning-objectives", label: "What you will learn" },
   { id: "why-it-matters", label: "Why it matters" },
   { id: "evaluation-framework", label: "Evaluation framework" },
@@ -443,12 +449,24 @@ export function ResearchTopicArticle({
   nextTopic,
 }: ResearchTopicArticleProps) {
   const lesson = getCourseTopicLesson(courseModule, topic);
+  const storyData = getStoryForTopic(
+    topic,
+    courseModule.title,
+    courseModule.moduleNumber
+  );
   const readingTime = estimateReadingTime([
     lesson.explanation,
     lesson.whyItMatters,
     lesson.practicalApplication,
     lesson.watchOutFor,
     lesson.workedExample,
+    storyData.story.title,
+    storyData.story.context,
+    storyData.story.dilemma,
+    storyData.story.choiceMade,
+    storyData.story.outcome,
+    storyData.story.moral,
+    storyData.analogy.explanation,
     ...lesson.detailedExplanation,
     ...lesson.conceptBreakdown.flatMap((item) => [item.title, item.description]),
     ...lesson.learningObjectives,
@@ -582,6 +600,13 @@ export function ResearchTopicArticle({
                 </div>
               </div>
             </section>
+
+            <div className="py-10 border-b border-wealth-border/80">
+              <InteractiveLessonStory
+                storyData={storyData}
+                topicName={topic}
+              />
+            </div>
 
             <section
               className="scroll-mt-28 border-b border-wealth-border/80 py-10"
