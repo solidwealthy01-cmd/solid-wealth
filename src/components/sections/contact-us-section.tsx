@@ -70,7 +70,16 @@ export function ContactUsSection() {
             }
             else {
                 const errData = await response.json().catch(() => ({}));
-                alert(errData.detail || "Failed to subscribe. Please check your inputs and try again.");
+                let errorMessage = errData.detail;
+                if (!errorMessage && typeof errData === "object" && errData !== null) {
+                    const messages = Object.entries(errData)
+                        .map(([field, errs]) => Array.isArray(errs) ? `${field}: ${errs.join(", ")}` : `${field}: ${errs}`)
+                        .filter(Boolean);
+                    if (messages.length > 0) {
+                        errorMessage = messages.join("\n");
+                    }
+                }
+                alert(errorMessage || "Failed to subscribe. Please check your inputs and try again.");
             }
         }
         catch (err) {
