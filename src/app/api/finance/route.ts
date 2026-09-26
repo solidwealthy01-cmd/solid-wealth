@@ -9,195 +9,156 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "Symbol is required" }, { status: 400 });
     }
 
-    try {
-        // Fast 1-attempt check for live quote so UI never hangs
-        const result = await fetchMarketQuote(symbol, 1);
-        if (!result) {
-            throw new Error(`No direct quote available for ${symbol}`);
-        }
-        let name = result.name;
-        let price = result.price;
-        let change = result.change;
-        const changePercent = result.changePercent;
-        let currency = result.currency || "USD";
-        let high = result.high;
-        let low = result.low;
-        let volume = result.volume;
-        let marketCap = result.marketCap;
+    const symUpper = symbol.toUpperCase().trim();
 
-        if (symbol === "GC=F") {
-            name = "Gold Price - MCX";
-            currency = "INR";
-            const snapshot = await getFilteredMarketSnapshot();
-            const liveGoldPrice = snapshot?.metals.gold.value;
-            if (liveGoldPrice) {
-                price = liveGoldPrice;
-            } else {
-                const globalChangePct = changePercent || 0.36;
-                price = 78240 * (1 + globalChangePct / 100);
-            }
-            change = price * ((changePercent || 0.36) / 100);
-            high = price * 1.003;
-            low = price * 0.997;
-            volume = 12400;
-            marketCap = 0;
-        }
-        else if (symbol === "SI=F") {
-            name = "Silver Price - MCX";
-            currency = "INR";
-            const snapshot = await getFilteredMarketSnapshot();
-            const liveSilverPrice = snapshot?.metals.silver.value;
-            if (liveSilverPrice) {
-                price = liveSilverPrice;
-            } else {
-                const globalChangePct = changePercent || 1.17;
-                price = 94150 * (1 + globalChangePct / 100);
-            }
-            change = price * ((changePercent || 1.17) / 100);
-            high = price * 1.005;
-            low = price * 0.995;
-            volume = 8500;
-            marketCap = 0;
-        }
-        return NextResponse.json({
-            symbol: result.symbol,
-            name,
-            price,
-            change,
-            changePercent,
-            currency,
-            high,
-            low,
-            volume,
-            marketCap,
-            timestamp: Date.now(),
-        });
-    }
-    catch (error) {
-        // Fallback to Solid Wealth Backend Market Snapshot before static fallbacks
-        const snapshot = await getFilteredMarketSnapshot();
-        if (snapshot) {
-            if (symbol === "^NSEI" && snapshot.indices.nifty_50.value) {
-                const price = snapshot.indices.nifty_50.value;
+    // 1. Check backend market snapshot for indices, metals, macro, and crypto
+    const snapshot = await getFilteredMarketSnapshot();
+    if (snapshot) {
+        if (symUpper === "^NSEI" || symUpper === "NIFTY") {
+            const nifty = snapshot.indices.nifty_50;
+            if (nifty.value) {
                 return NextResponse.json({
-                    symbol,
-                    name: "NIFTY 50",
-                    price,
+                    symbol: "^NSEI",
+                    name: nifty.name,
+                    price: nifty.value,
                     change: 0,
                     changePercent: 0,
                     currency: "INR",
-                    high: price * 1.005,
-                    low: price * 0.995,
+                    high: nifty.value * 1.005,
+                    low: nifty.value * 0.995,
                     volume: 250000000,
                     marketCap: 0,
                     timestamp: Date.now(),
                     source: "backend_snapshot",
                 });
             }
-            if (symbol === "^BSESN" && snapshot.indices.sensex.value) {
-                const price = snapshot.indices.sensex.value;
+        }
+
+        if (symUpper === "^BSESN" || symUpper === "SENSEX") {
+            const sensex = snapshot.indices.sensex;
+            if (sensex.value) {
                 return NextResponse.json({
-                    symbol,
-                    name: "SENSEX",
-                    price,
+                    symbol: "^BSESN",
+                    name: sensex.name,
+                    price: sensex.value,
                     change: 0,
                     changePercent: 0,
                     currency: "INR",
-                    high: price * 1.005,
-                    low: price * 0.995,
+                    high: sensex.value * 1.005,
+                    low: sensex.value * 0.995,
                     volume: 180000000,
                     marketCap: 0,
                     timestamp: Date.now(),
                     source: "backend_snapshot",
                 });
             }
-            if (symbol === "GC=F" && snapshot.metals.gold.value) {
-                const price = snapshot.metals.gold.value;
+        }
+
+        if (symUpper === "GC=F" || symUpper === "GOLD") {
+            const gold = snapshot.metals.gold;
+            if (gold.value) {
                 return NextResponse.json({
-                    symbol,
-                    name: "Gold Price - MCX",
-                    price,
+                    symbol: "GC=F",
+                    name: "Gold Price - MCX (24K)",
+                    price: gold.value,
                     change: 0,
                     changePercent: 0,
                     currency: "INR",
-                    high: price * 1.003,
-                    low: price * 0.997,
+                    high: gold.value * 1.003,
+                    low: gold.value * 0.997,
                     volume: 12400,
                     marketCap: 0,
                     timestamp: Date.now(),
                     source: "backend_snapshot",
                 });
             }
-            if (symbol === "SI=F" && snapshot.metals.silver.value) {
-                const price = snapshot.metals.silver.value;
+        }
+
+        if (symUpper === "SI=F" || symUpper === "SILVER") {
+            const silver = snapshot.metals.silver;
+            if (silver.value) {
                 return NextResponse.json({
-                    symbol,
+                    symbol: "SI=F",
                     name: "Silver Price - MCX",
-                    price,
+                    price: silver.value,
                     change: 0,
                     changePercent: 0,
                     currency: "INR",
-                    high: price * 1.005,
-                    low: price * 0.995,
+                    high: silver.value * 1.005,
+                    low: silver.value * 0.995,
                     volume: 8500,
                     marketCap: 0,
                     timestamp: Date.now(),
                     source: "backend_snapshot",
                 });
             }
-            if ((symbol === "BTC-USD" || symbol === "BTC") && snapshot.crypto.bitcoin.value) {
-                const price = snapshot.crypto.bitcoin.value;
+        }
+
+        if (symUpper === "CL=F" || symUpper === "CRUDE") {
+            const crude = snapshot.macro.crude_oil;
+            if (crude.value) {
                 return NextResponse.json({
-                    symbol: "BTC-USD",
-                    name: "Bitcoin USD",
-                    price,
+                    symbol: "CL=F",
+                    name: crude.name,
+                    price: crude.value,
                     change: 0,
                     changePercent: 0,
                     currency: "USD",
-                    high: price * 1.02,
-                    low: price * 0.98,
-                    volume: 24000000000,
-                    marketCap: price * 19700000,
+                    high: crude.value * 1.01,
+                    low: crude.value * 0.99,
+                    volume: 450000,
+                    marketCap: 0,
                     timestamp: Date.now(),
                     source: "backend_snapshot",
                 });
             }
         }
 
-        const mockDataMap: Record<string, {
-            price: number;
-            changePercent: number;
-            currency: string;
-            name: string;
-        }> = {
-            AAPL: { price: 228.50, changePercent: 1.24, currency: "USD", name: "Apple Inc." },
-            TSLA: { price: 254.30, changePercent: -0.83, currency: "USD", name: "Tesla, Inc." },
-            "BTC-USD": { price: 84172.0, changePercent: 1.50, currency: "USD", name: "Bitcoin USD" },
-            "ETH-USD": { price: 3450.0, changePercent: 2.10, currency: "USD", name: "Ethereum USD" },
-            MSFT: { price: 428.15, changePercent: 0.95, currency: "USD", name: "Microsoft Corporation" },
-            NVDA: { price: 125.40, changePercent: 3.12, currency: "USD", name: "NVIDIA Corporation" },
-            "^NSEI": { price: 25810.85, changePercent: 0.45, currency: "INR", name: "NIFTY 50" },
-            "^BSESN": { price: 84544.31, changePercent: 0.42, currency: "INR", name: "SENSEX" },
-        };
-        const mock = mockDataMap[symbol] || {
-            price: Math.random() * 500 + 10,
-            changePercent: Math.random() * 6 - 3,
-            currency: "USD",
-            name: `${symbol} (Simulation)`,
-        };
-        return NextResponse.json({
-            symbol,
-            name: mock.name,
-            price: mock.price,
-            change: mock.price * (mock.changePercent / 100),
-            changePercent: mock.changePercent,
-            currency: mock.currency,
-            high: mock.price * 1.02,
-            low: mock.price * 0.98,
-            volume: Math.floor(Math.random() * 10000000),
-            marketCap: Math.floor(Math.random() * 100000000000),
-            timestamp: Date.now(),
-            isMock: true,
-        });
+        if (symUpper === "BTC-USD" || symUpper === "BTC" || symUpper === "BITCOIN") {
+            const btc = snapshot.crypto.bitcoin;
+            if (btc.value) {
+                return NextResponse.json({
+                    symbol: "BTC-USD",
+                    name: "Bitcoin USD",
+                    price: btc.value,
+                    change: 0,
+                    changePercent: 0,
+                    currency: "USD",
+                    high: btc.value * 1.02,
+                    low: btc.value * 0.98,
+                    volume: 24000000000,
+                    marketCap: btc.value * 19700000,
+                    timestamp: Date.now(),
+                    source: "backend_snapshot",
+                });
+            }
+        }
     }
+
+    // 2. Fetch live quote for US Equities or other assets
+    try {
+        const result = await fetchMarketQuote(symbol, 2);
+        if (result && result.price) {
+            return NextResponse.json({
+                symbol: result.symbol,
+                name: result.name,
+                price: result.price,
+                change: result.change,
+                changePercent: result.changePercent,
+                currency: result.currency || "USD",
+                high: result.high ?? result.price * 1.02,
+                low: result.low ?? result.price * 0.98,
+                volume: result.volume ?? 0,
+                marketCap: result.marketCap ?? 0,
+                timestamp: Date.now(),
+            });
+        }
+    } catch (err) {
+        console.error(`Error fetching live quote for ${symbol}:`, err);
+    }
+
+    return NextResponse.json(
+        { error: `Live market data currently unavailable for ${symbol}` },
+        { status: 503 }
+    );
 }
