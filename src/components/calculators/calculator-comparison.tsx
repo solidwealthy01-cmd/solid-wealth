@@ -304,8 +304,28 @@ function calculateStrategyTrajectory(strategy: StrategyConfig) {
 }
 
 export function CalculatorComparisonView() {
-  const [strategies, setStrategies] = useState<StrategyConfig[]>(PRESET_RECIPES[0].strategies);
-  const [syncedYears, setSyncedYears] = useState<number>(15);
+  const [viewMode, setViewMode] = useState<"compare" | "combined">("combined");
+  const [strategies, setStrategies] = useState<StrategyConfig[]>([
+    {
+      id: "1",
+      type: "sip",
+      title: "Mutual Fund A (e.g. Large Cap)",
+      color: "#0B63E5",
+      monthlyAmount: 5000,
+      expectedReturn: 12,
+      years: 2,
+    },
+    {
+      id: "2",
+      type: "sip",
+      title: "Mutual Fund B (e.g. Mid/Small Cap)",
+      color: "#fe9800",
+      monthlyAmount: 5000,
+      expectedReturn: 15,
+      years: 2,
+    },
+  ]);
+  const [syncedYears, setSyncedYears] = useState<number>(2);
   const [isYearsSynced, setIsYearsSynced] = useState<boolean>(true);
   const [chartView, setChartView] = useState<"line" | "bar">("line");
 
@@ -377,17 +397,54 @@ export function CalculatorComparisonView() {
     }));
   }, [strategies]);
 
+  // Combined totals across all selected funds/strategies
+  const combinedTotals = useMemo(() => {
+    let totalInvested = 0;
+    let totalValue = 0;
+    let totalMonthly = 0;
+    let totalInitial = 0;
+
+    computedStrategies.forEach((s) => {
+      totalInvested += s.finalInvested;
+      totalValue += s.finalValue;
+      if (s.monthlyAmount) totalMonthly += s.monthlyAmount;
+      if (s.initialInvestment) totalInitial += s.initialInvestment;
+    });
+
+    const totalGains = totalValue - totalInvested;
+    const overallMultiplier = totalInvested > 0 ? (totalValue / totalInvested).toFixed(2) : "1.00";
+
+    return {
+      totalInvested,
+      totalValue,
+      totalGains,
+      totalMonthly,
+      totalInitial,
+      overallMultiplier,
+    };
+  }, [computedStrategies]);
+
   // Combined chart data across all years
   const maxYears = Math.max(...strategies.map((s) => s.years), 1);
   const chartData = useMemo(() => {
     const data: any[] = [];
     for (let y = 1; y <= maxYears; y++) {
+      let cumulativeCombinedValue = 0;
+      let cumulativeCombinedInvested = 0;
       const row: any = { year: `Year ${y}` };
+
       computedStrategies.forEach((s) => {
         const point = s.yearlyData.find((d) => d.year === y);
+        const val = point ? point.value : 0;
+        const inv = point ? point.invested : 0;
         row[`val_${s.id}`] = point ? point.value : null;
         row[`inv_${s.id}`] = point ? point.invested : null;
+        cumulativeCombinedValue += val;
+        cumulativeCombinedInvested += inv;
       });
+
+      row.combinedValue = cumulativeCombinedValue;
+      row.combinedInvested = cumulativeCombinedInvested;
       data.push(row);
     }
     return data;
@@ -406,36 +463,90 @@ export function CalculatorComparisonView() {
 
   return (
     <div className="w-full space-y-8 animate-fadeIn">
-      {/* Top Banner & Quick Presets */}
+      {/* Top Banner & View Switcher */}
       <div className="rounded-2xl border border-blue-100 bg-[#F0F6FF]/80 p-5 sm:p-6 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-[#0B63E5] text-xs font-bold uppercase tracking-wider mb-2">
-              <Scale className="size-3.5" /> Strategy Comparison Mode
+              <Scale className="size-3.5" /> Multi-Fund & Strategy Calculator
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-[#1a2332]">
-              Compare Multiple Investment & Wealth Strategies
+              Multi-Fund Portfolio & Strategy Comparison
             </h2>
             <p className="text-xs sm:text-sm text-gray-600 mt-0.5">
-              Simulate 2 to 4 options side-by-side to discover the highest wealth generator, compounding speed, and cashflow efficiency.
+              Calculate your combined wealth across 2+ mutual funds or compare multiple strategies side-by-side.
             </p>
           </div>
 
-          {/* Quick Presets */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Presets:</span>
-            {PRESET_RECIPES.map((preset) => (
-              <button
-                key={preset.id}
-                onClick={() => applyPreset(preset.id)}
-                className="px-3 py-1.5 rounded-lg border border-blue-200 bg-white hover:bg-blue-50 text-xs font-bold text-blue-900 shadow-2xs transition-all cursor-pointer"
-              >
-                {preset.name}
-              </button>
-            ))}
+          {/* View Mode Switcher */}
+          <div className="flex bg-white p-1 rounded-xl border border-blue-200 shadow-2xs self-start lg:self-auto">
+            <button
+              onClick={() => setViewMode("combined")}
+              className={cn(
+                "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                viewMode === "combined"
+                  ? "bg-[#0B63E5] text-white shadow-xs"
+                  : "text-gray-600 hover:text-gray-900"
+              )}
+            >
+              Combined Portfolio Total
+            </button>
+            <button
+              onClick={() => setViewMode("compare")}
+              className={cn(
+                "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                viewMode === "compare"
+                  ? "bg-[#0B63E5] text-white shadow-xs"
+                  : "text-gray-600 hover:text-gray-900"
+              )}
+            >
+              Compare Side-by-Side
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Combined Portfolio Overview KPI Cards (Shown when in Combined Mode) */}
+      {viewMode === "combined" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fadeIn">
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xs">
+            <p className="text-xs font-semibold text-gray-500">Combined Monthly Investment</p>
+            <p className="text-2xl font-black text-[#1a2332] mt-1">
+              ₹{formatINR(combinedTotals.totalMonthly)}
+              <span className="text-xs text-gray-400 font-normal ml-1">/mo</span>
+            </p>
+            <p className="text-[11px] text-gray-400 mt-0.5">Across all {strategies.length} funds</p>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xs">
+            <p className="text-xs font-semibold text-gray-500">Total Capital Invested</p>
+            <p className="text-2xl font-black text-[#1a2332] mt-1">
+              ₹{formatINR(combinedTotals.totalInvested)}
+            </p>
+            <p className="text-[11px] text-gray-400 mt-0.5">Over {syncedYears} Years</p>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xs">
+            <p className="text-xs font-semibold text-gray-500">Total Compounding Gains</p>
+            <p className="text-2xl font-black text-emerald-600 mt-1">
+              +₹{formatINR(combinedTotals.totalGains)}
+            </p>
+            <p className="text-[11px] text-emerald-700 font-bold mt-0.5">
+              +{((combinedTotals.totalGains / Math.max(combinedTotals.totalInvested, 1)) * 100).toFixed(1)}% Total Profit
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-blue-200 bg-[#F0F6FF] p-5 shadow-xs">
+            <p className="text-xs font-bold text-[#0B63E5]">Combined Maturity Corpus</p>
+            <p className="text-2xl font-black text-[#0B63E5] mt-1">
+              ₹{formatINR(combinedTotals.totalValue)}
+            </p>
+            <p className="text-[11px] text-blue-800 font-semibold mt-0.5">
+              {combinedTotals.overallMultiplier}x Wealth Multiplier
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Synchronized Timeline Control Strip */}
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">

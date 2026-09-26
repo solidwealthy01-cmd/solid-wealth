@@ -28,6 +28,7 @@ import {
   Scale
 } from "lucide-react";
 import { CalculatorComparisonView } from "@/components/calculators/calculator-comparison";
+import { PortfolioJourneyCalculator } from "@/components/calculators/portfolio-journey-calculator";
 import {
   BarChart,
   Bar,
@@ -2062,7 +2063,7 @@ const calculatorsList = [
 ];
 
 export default function CalculatorsPage() {
-  const [pageMode, setPageMode] = useState<"single" | "compare">("single");
+  const [pageMode, setPageMode] = useState<"single" | "compare" | "journey">("single");
   const [activeCalcId, setActiveCalcId] = useState("emi");
   const activeCalc = calculatorsList.find((c) => c.id === activeCalcId) || calculatorsList[0];
   const ActiveComponent = activeCalc.Component;
@@ -2071,7 +2072,7 @@ export default function CalculatorsPage() {
     <div className="min-h-screen bg-[#FFFDF4] pt-28 sm:pt-32 pb-20 print:pt-0 print:pb-0 print:bg-white">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 print:hidden">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xs font-bold uppercase tracking-widest text-[#fe9800]">Solid Wealth Tools</span>
@@ -2081,11 +2082,11 @@ export default function CalculatorsPage() {
           
           <div className="flex items-center gap-3">
             {/* Mode Switcher Tabs */}
-            <div className="flex bg-white p-1 rounded-xl border border-gray-200 shadow-2xs">
+            <div className="flex bg-white p-1 rounded-xl border border-gray-200 shadow-2xs overflow-x-auto max-w-full">
               <button
                 onClick={() => setPageMode("single")}
                 className={cn(
-                  "px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5",
+                  "px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
                   pageMode === "single"
                     ? "bg-[#fe9800] text-white shadow-xs"
                     : "text-gray-600 hover:text-gray-900"
@@ -2094,10 +2095,11 @@ export default function CalculatorsPage() {
                 <Calculator className="size-4" />
                 <span>Single Calculator</span>
               </button>
+
               <button
                 onClick={() => setPageMode("compare")}
                 className={cn(
-                  "px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5",
+                  "px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
                   pageMode === "compare"
                     ? "bg-[#0B63E5] text-white shadow-xs"
                     : "text-gray-600 hover:text-gray-900"
@@ -2105,19 +2107,36 @@ export default function CalculatorsPage() {
               >
                 <Scale className="size-4" />
                 <span>Compare Strategies</span>
-                <span className="ml-1 px-1.5 py-0.2 bg-blue-100 text-blue-700 rounded text-[10px] font-extrabold uppercase">
-                  New
+              </button>
+
+              <button
+                onClick={() => setPageMode("journey")}
+                className={cn(
+                  "px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
+                  pageMode === "journey"
+                    ? "bg-[#10B981] text-white shadow-xs"
+                    : "text-gray-600 hover:text-gray-900"
+                )}
+              >
+                <Layers className="size-4" />
+                <span>Multi-Phase Journey</span>
+                <span className="ml-1 px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded text-[10px] font-extrabold uppercase">
+                  SIP → Lumpsum → SWP
                 </span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Dynamic Content: Single Calculator or Comparison View */}
-        {pageMode === "single" ? (
+        {/* Dynamic Content: Single Calculator, Comparison View, or Multi-Phase Journey */}
+        {pageMode === "single" && (
           <ActiveComponent activeCalc={activeCalc} calculatorsList={calculatorsList} setActiveCalcId={setActiveCalcId} />
-        ) : (
+        )}
+        {pageMode === "compare" && (
           <CalculatorComparisonView />
+        )}
+        {pageMode === "journey" && (
+          <PortfolioJourneyCalculator />
         )}
       </div>
     </div>
