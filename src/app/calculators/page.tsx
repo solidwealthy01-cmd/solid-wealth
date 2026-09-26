@@ -24,8 +24,10 @@ import {
   Clock,
   ArrowUpRight,
   FileText,
-  Cpu
+  Cpu,
+  Scale
 } from "lucide-react";
+import { CalculatorComparisonView } from "@/components/calculators/calculator-comparison";
 import {
   BarChart,
   Bar,
@@ -2060,6 +2062,7 @@ const calculatorsList = [
 ];
 
 export default function CalculatorsPage() {
+  const [pageMode, setPageMode] = useState<"single" | "compare">("single");
   const [activeCalcId, setActiveCalcId] = useState("emi");
   const activeCalc = calculatorsList.find((c) => c.id === activeCalcId) || calculatorsList[0];
   const ActiveComponent = activeCalc.Component;
@@ -2068,21 +2071,54 @@ export default function CalculatorsPage() {
     <div className="min-h-screen bg-[#FFFDF4] pt-28 sm:pt-32 pb-20 print:pt-0 print:pb-0 print:bg-white">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 print:hidden">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xs font-bold uppercase tracking-widest text-[#fe9800]">Solid Wealth Tools</span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-black text-[#1a2332]">Financial Calculators & Analytics</h1>
           </div>
-          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-gray-100 shadow-xs">
-            <ShieldCheck size={16} className="text-[#fe9800]" />
-            <span className="text-xs font-bold text-gray-700">Verified Mathematical Formulations</span>
+          
+          <div className="flex items-center gap-3">
+            {/* Mode Switcher Tabs */}
+            <div className="flex bg-white p-1 rounded-xl border border-gray-200 shadow-2xs">
+              <button
+                onClick={() => setPageMode("single")}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5",
+                  pageMode === "single"
+                    ? "bg-[#fe9800] text-white shadow-xs"
+                    : "text-gray-600 hover:text-gray-900"
+                )}
+              >
+                <Calculator className="size-4" />
+                <span>Single Calculator</span>
+              </button>
+              <button
+                onClick={() => setPageMode("compare")}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5",
+                  pageMode === "compare"
+                    ? "bg-[#0B63E5] text-white shadow-xs"
+                    : "text-gray-600 hover:text-gray-900"
+                )}
+              >
+                <Scale className="size-4" />
+                <span>Compare Strategies</span>
+                <span className="ml-1 px-1.5 py-0.2 bg-blue-100 text-blue-700 rounded text-[10px] font-extrabold uppercase">
+                  New
+                </span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Active Calculator Component */}
-        <ActiveComponent activeCalc={activeCalc} calculatorsList={calculatorsList} setActiveCalcId={setActiveCalcId} />
+        {/* Dynamic Content: Single Calculator or Comparison View */}
+        {pageMode === "single" ? (
+          <ActiveComponent activeCalc={activeCalc} calculatorsList={calculatorsList} setActiveCalcId={setActiveCalcId} />
+        ) : (
+          <CalculatorComparisonView />
+        )}
       </div>
     </div>
   );

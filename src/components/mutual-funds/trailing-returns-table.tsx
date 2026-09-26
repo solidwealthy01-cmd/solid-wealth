@@ -240,7 +240,6 @@ export function TrailingReturnsTable() {
     tableMessage = funds.length === 0 ? "No schemes in this category." : "No schemes match your search.";
   }
 
-  // Group categories by asset class
   const [selectedGroup, setSelectedGroup] = useState<string>("All");
 
   const categoryGroups = useMemo(() => {
