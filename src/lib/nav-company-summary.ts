@@ -75,12 +75,21 @@ function parseAmfiRows(text: string): Map<string, AmfiRow> {
 }
 
 async function fetchJson(url: string, label: string): Promise<CompanySummary> {
-    const res = await fetch(url, {
-        cache: "force-cache",
-        next: { revalidate: secondsUntilIstMidnight(), tags: [NAV_SUMMARY_TAG] },
-    });
-    if (!res.ok) throw new Error(`${label} request failed with ${res.status}`);
-    return res.json();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
+    try {
+        const res = await fetch(url, {
+            cache: "force-cache",
+            next: { revalidate: secondsUntilIstMidnight(), tags: [NAV_SUMMARY_TAG] },
+            signal: controller.signal,
+        });
+        clearTimeout(timer);
+        if (!res.ok) throw new Error(`${label} request failed with ${res.status}`);
+        return await res.json();
+    } catch (err) {
+        clearTimeout(timer);
+        throw err;
+    }
 }
 
 async function fetchAmfiRows(): Promise<Map<string, AmfiRow>> {
@@ -108,7 +117,10 @@ export async function fetchNavCompanySummary(): Promise<NavSummaryPayload> {
     if (stitched?.key === key) return stitched.payload;
 
     const [summary, rows] = await Promise.all([
-        fetchJson(`${API_BASE_URL}/api/nav/company-summary/`, "Company NAV summary"),
+        fetchJson(`${API_BASE_URL}/api/nav/company-summary/`, "Company NAV summary").catch((error) => {
+            console.warn("Company NAV summary backend unavailable, serving fallback:", (error as Error).message);
+            return { count: 0, next: null, previous: null, results: [] } as CompanySummary;
+        }),
         // A missing or malformed AMFI file must not take the NAV cards down with
         // it: the funds still render, only the category filters go quiet.
         fetchAmfiRows().catch((error) => {

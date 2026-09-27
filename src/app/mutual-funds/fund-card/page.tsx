@@ -1,40 +1,17 @@
-"use client";
+import type { Metadata } from "next";
+import { FundCardView } from "@/components/mutual-funds/fund-card-view";
 
-import React, { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { SchemePerformanceDetail } from "@/components/mutual-funds/scheme-performance-detail";
-
-function FundCardContent() {
-  const searchParams = useSearchParams();
-
-  return (
-    <SchemePerformanceDetail
-      category={searchParams.get("category") ?? ""}
-      period={searchParams.get("period") ?? ""}
-      scheme={searchParams.get("scheme") ?? ""}
-    />
-  );
-}
+// This page renders whatever scheme the query string names, so every
+// ?category=&period=&scheme= combination would look like a separate thin page to
+// a crawler. It is kept out of the index (and out of the sitemap) while still
+// letting crawlers follow its links. The indexable fund pages are
+// /mutual-funds/[slug].
+export const metadata: Metadata = {
+    title: "Fund Card Analytics",
+    description: "Detailed performance analytics for an individual mutual fund scheme.",
+    robots: { index: false, follow: true },
+};
 
 export default function FundCardPage() {
-  return (
-    <div className="min-h-screen bg-[#FFFDF7] pt-28 pb-20 sm:pt-36 sm:pb-24 lg:pt-40">
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        <Suspense
-          fallback={
-            <div className="flex items-center justify-center min-h-[400px]">
-              <div className="text-center space-y-3">
-                <div className="size-8 border-4 border-[#0B63E5] border-t-transparent rounded-full animate-spin mx-auto" />
-                <p className="text-sm font-semibold text-gray-500">
-                  Loading fund card analytics...
-                </p>
-              </div>
-            </div>
-          }
-        >
-          <FundCardContent />
-        </Suspense>
-      </div>
-    </div>
-  );
+    return <FundCardView />;
 }

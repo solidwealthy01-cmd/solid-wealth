@@ -67,7 +67,7 @@ export function MarketTicker() {
             catch (err) {
                 if ((err as Error).name === "AbortError")
                     return;
-                console.error("Failed to load ticker data from API:", err);
+                console.warn("Ticker data currently unavailable from API:", (err as Error).message);
             }
         };
         fetchMarketSnapshot();

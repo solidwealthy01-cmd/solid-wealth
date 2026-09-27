@@ -2,12 +2,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight, TrendingUp } from "lucide-react";
 import { TrailingReturnsTable } from "@/components/mutual-funds/trailing-returns-table";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Mutual Fund Trailing Returns & Performance Research | Solid Wealth",
+export const metadata: Metadata = pageMetadata({
+  title: "Mutual Fund Trailing Returns & Performance Research",
   description:
-    "Explore mutual fund trailing returns, AUM, expense ratios, rankings, and performance across all equity and debt categories.",
-};
+    "Compare mutual fund trailing returns, AUM, expense ratios and category rankings across every equity, debt and hybrid category, updated from AMFI data.",
+  path: "/mutual-funds",
+  keywords: [
+    "mutual fund returns",
+    "best mutual funds india",
+    "mutual fund performance comparison",
+    "trailing returns mutual funds",
+    "mutual fund research india",
+    "top performing mutual funds",
+  ],
+});
 
 export default function MutualFundsResearchPage() {
   return (

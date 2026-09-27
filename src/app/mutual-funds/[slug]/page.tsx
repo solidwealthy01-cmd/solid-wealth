@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { MUTUAL_FUNDS_DATA, getFundBySlugOrName } from "@/lib/mutual-funds-data";
 import { FundCardDetail } from "@/components/mutual-funds/fund-card-detail";
 
@@ -18,10 +19,12 @@ export async function generateMetadata({ params }: SlugPageProps): Promise<Metad
   const resolvedParams = await params;
   const fund = getFundBySlugOrName(resolvedParams.slug);
 
-  return {
-    title: `${fund.fullName} - Fund Card & Analytics | Solid Wealth`,
-    description: `Detailed factsheet, NAV, asset allocation, yearly performance, risk-o-meter, and SIP returns for ${fund.fullName}.`,
-  };
+  return pageMetadata({
+    title: `${fund.fullName} — NAV, Returns & Fund Card`,
+    description: `Factsheet for ${fund.fullName}: latest NAV, asset allocation, year-by-year performance, risk-o-meter rating and SIP return history.`,
+    path: `/mutual-funds/${resolvedParams.slug}`,
+    keywords: [fund.fullName, `${fund.fullName} nav`, `${fund.fullName} returns`, "mutual fund factsheet", "fund card"],
+  });
 }
 
 export default async function FundSlugPage({ params }: SlugPageProps) {
