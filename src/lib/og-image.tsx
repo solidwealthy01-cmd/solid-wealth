@@ -14,9 +14,12 @@ import { SITE_NAME, SITE_URL } from "@/lib/seo";
 export const OG_SIZE = { width: 1200, height: 630 };
 export const OG_CONTENT_TYPE = "image/png";
 
-const NAVY = "#0B1F3A";
-const ORANGE = "#fe9800";
-const CREAM = "#FFFDF4";
+// Straight from the brand tokens in styles/globals.css, so the card matches the
+// site rather than approximating it.
+const CREAM = "#FFFDF4";       // --wealth-bg, the off-white-orange surface
+const INK = "#0f1a2c";         // --wealth-text-primary
+const INK_SOFT = "#495973";    // --wealth-text-secondary
+const ORANGE = "#fe9800";      // --wealth-accent
 
 // Read once per process; the images are generated at build time.
 let logoDataUri: string | null = null;
@@ -74,18 +77,29 @@ export async function renderOgImage({ eyebrow, title, subtitle }: OgCard) {
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
-                    backgroundColor: NAVY,
-                    // A soft brand glow so the card is not a flat rectangle.
-                    backgroundImage: `radial-gradient(circle at 88% 8%, rgba(254,152,0,0.30) 0%, rgba(254,152,0,0) 46%)`,
-                    padding: "64px 72px",
+                    // Flat fill, no gradient: the card should read as one clean
+                    // brand surface at thumbnail size.
+                    backgroundColor: CREAM,
+                    // Feeds render previews on white, where a cream card would have
+                    // no visible edge. A hairline keeps the card's shape.
+                    border: "2px solid #F2E7CE",
+                    padding: "62px 70px",
                     fontFamily: "Sora",
                 }}
             >
                 {/* Brand lockup */}
                 <div style={{ display: "flex", alignItems: "center" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={logo} width={84} height={84} alt="" style={{ borderRadius: 22 }} />
-                    <span style={{ marginLeft: 22, fontSize: 38, fontWeight: 700, color: CREAM, letterSpacing: -0.5 }}>
+                    <img
+                        src={logo}
+                        width={84}
+                        height={84}
+                        alt=""
+                        // The logo art is already cream-backed, so on a cream card
+                        // the tile needs an edge or it dissolves into the surface.
+                        style={{ borderRadius: 22, border: `2px solid ${ORANGE}` }}
+                    />
+                    <span style={{ marginLeft: 22, fontSize: 38, fontWeight: 700, color: INK, letterSpacing: -0.5 }}>
                         {SITE_NAME}
                     </span>
                 </div>
@@ -100,7 +114,7 @@ export async function renderOgImage({ eyebrow, title, subtitle }: OgCard) {
                             marginTop: 18,
                             fontSize: titleFontSize(title),
                             fontWeight: 700,
-                            color: "#ffffff",
+                            color: INK,
                             lineHeight: 1.12,
                             letterSpacing: -1.5,
                         }}
@@ -108,7 +122,7 @@ export async function renderOgImage({ eyebrow, title, subtitle }: OgCard) {
                         {title}
                     </span>
                     {subtitle ? (
-                        <span style={{ marginTop: 20, fontSize: 27, color: "rgba(255,253,244,0.72)", lineHeight: 1.38 }}>
+                        <span style={{ marginTop: 20, fontSize: 27, color: INK_SOFT, lineHeight: 1.38 }}>
                             {subtitle}
                         </span>
                     ) : null}
@@ -121,7 +135,9 @@ export async function renderOgImage({ eyebrow, title, subtitle }: OgCard) {
                             <div key={band} style={{ flex: 1, backgroundColor: band }} />
                         ))}
                     </div>
-                    <span style={{ marginTop: 20, fontSize: 24, fontWeight: 400, color: "rgba(255,253,244,0.62)" }}>
+                    {/* --wealth-text-muted only reaches 2.8:1 on this cream, so the
+                        domain uses the secondary ink instead. */}
+                    <span style={{ marginTop: 20, fontSize: 24, fontWeight: 400, color: INK_SOFT }}>
                         {SITE_URL.replace(/^https?:\/\//, "")}
                     </span>
                 </div>
