@@ -544,7 +544,15 @@ export function FundCardDetail({ initialScheme }: FundCardDetailProps) {
 
         {/* Right: Risk-o-meter Gauge (4 cols) */}
         <div className="lg:col-span-4">
-          <RiskOMeter risk={fund.riskStatus} />
+          <RiskOMeter
+            risk={fund.riskStatus}
+            benchmarkName={fund.benchmark}
+            benchmarkRisk="Very High"
+            beta={fund.portfolioBehavior.beta}
+            volatilityFund={fund.portfolioBehavior.standardDeviation}
+            fundName={fund.name}
+            showBenchmarkComparison={true}
+          />
         </div>
       </div>
 

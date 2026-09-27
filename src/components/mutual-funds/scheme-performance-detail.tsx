@@ -19,6 +19,7 @@ import {
   type ReturnKey,
 } from "@/lib/mutual-fund-performance";
 import { FundAnalyticsSections } from "./fund-analytics-sections";
+import { RiskOMeter } from "./risk-o-meter";
 
 interface SchemePerformanceDetailProps {
   category: string;
@@ -315,6 +316,31 @@ export function SchemePerformanceDetail({ category, scheme, period }: SchemePerf
               value={linked?.volatility3y != null ? `${linked.volatility3y.toFixed(2)}%` : "-"}
             />
           </div>
+
+          {/* Aggression Meter & Risk-o-meter with respect to Benchmark */}
+          <RiskOMeter
+            risk={
+              (fund.category || "").toLowerCase().includes("debt") || (fund.category || "").toLowerCase().includes("liquid")
+                ? "Low"
+                : (fund.category || "").toLowerCase().includes("hybrid")
+                ? "Moderately High"
+                : "Very High"
+            }
+            benchmarkRisk="Very High"
+            benchmarkName={
+              (fund.category || "").toLowerCase().includes("large cap") || (fund.category || "").toLowerCase().includes("bluechip")
+                ? "NIFTY 50 TRI"
+                : (fund.category || "").toLowerCase().includes("mid cap")
+                ? "NIFTY Midcap 150 TRI"
+                : (fund.category || "").toLowerCase().includes("small cap")
+                ? "NIFTY Smallcap 250 TRI"
+                : "NIFTY 500 TRI"
+            }
+            beta={toNumber(fund.beta) || (fund.std_deviation ? (Number(fund.std_deviation) / 14.5) : null)}
+            volatilityFund={linked?.volatility3y != null ? linked.volatility3y : toNumber(fund.std_deviation)}
+            fundName={fund.scheme_name}
+            showBenchmarkComparison={true}
+          />
 
           {analyticsStatus === "loading" &&
             messageBox("Loading NAV history and category comparison...")}
