@@ -32,7 +32,7 @@ export function Footer() {
             { icon: FaLinkedinIn, label: "LinkedIn", href: "https://www.linkedin.com/company/solid-wealth/?originalSubdomain=in" },
             { icon: FaFacebookF, label: "Facebook", href: "#" },
             { icon: FaInstagram, label: "Instagram", href: "#" },
-            { icon: FaEnvelope, label: "Email", href: "mailto:support@solidwealth.in" }
+            { icon: FaEnvelope, label: "Email", href: "mailto:solidwealthy@gmail.com" }
         ].map((Social, idx) => (<a key={idx} href={Social.href} target={Social.href.startsWith("http") ? "_blank" : undefined} rel={Social.href.startsWith("http") ? "noopener noreferrer" : undefined} aria-label={Social.label} className="w-10 h-10 md:w-12 md:h-12 bg-[#fe9800] rounded-lg md:rounded-xl flex items-center justify-center text-[#0f172a] hover:bg-orange-400 hover:scale-105 transition-all">
                   <Social.icon className="w-[18px] h-[18px] md:w-[22px] md:h-[22px]"/>
                 </a>))}

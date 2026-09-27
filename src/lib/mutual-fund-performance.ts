@@ -1,7 +1,7 @@
 // Shared types and formatting for /api/mutual-fund-performance/ data, used by
 // the trailing returns table and the scheme detail page.
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://solidwealthindia.com";
+export { API_BASE_URL } from "./api-config";
 
 export type ReturnKey =
   | "return_1w"

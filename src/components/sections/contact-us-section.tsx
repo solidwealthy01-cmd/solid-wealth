@@ -1,6 +1,7 @@
 "use client";
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
+import { API_BASE_URL } from "@/lib/api-config";
 const countries = [
     { code: "+91", flag: "🇮🇳", name: "India" },
     { code: "+1", flag: "🇺🇸", name: "United States" },
@@ -48,7 +49,6 @@ export function ContactUsSection() {
             return;
         setIsLoading(true);
         try {
-            const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://solidwealthindia.com";
             const requestBody: any = {
                 name: name.trim(),
                 email: email.trim(),
@@ -58,7 +58,7 @@ export function ContactUsSection() {
             if (phone.trim()) {
                 requestBody.mobile_number = `${phonePrefix.trim()}${phone.trim()}`.trim();
             }
-            const response = await fetch(`${baseUrl}/api/subscribers/`, {
+            const response = await fetch(`${API_BASE_URL}/api/subscribers/`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"

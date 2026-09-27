@@ -2,6 +2,7 @@
 import Script from 'next/script';
 import { useState, useRef, useEffect } from 'react';
 import { X, Send, Loader2, Bot, User } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/api-config';
 
 const LottiePlayer = 'lottie-player' as any;
 
@@ -279,8 +280,7 @@ export function ChatbotFloat() {
             if (sessionId) {
                 payload.session_id = sessionId;
             }
-            const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://solidwealthindia.com";
-            const response = await fetch(`${baseUrl}/api/chatbot/`, {
+            const response = await fetch(`${API_BASE_URL}/api/chatbot/`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"

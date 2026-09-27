@@ -837,7 +837,7 @@ const CalculatorLayout = ({
                 >
                   <img src="/Printable.svg" alt="Template Header" className="w-full h-auto object-cover opacity-80" />
 
-                  {/* pb-20 keeps content clear of the www.solidwealth.in mark the
+                  {/* pb-20 keeps content clear of the www.solidwealthindia.com mark the
                       Printable.svg template draws over the bottom ~68px of the page. */}
                   <div className="absolute top-0 left-0 w-full h-full pt-[250px] px-16 flex flex-col pb-20">
                     <div className="flex justify-between items-end border-b-2 border-gray-100 pb-5 mb-5">

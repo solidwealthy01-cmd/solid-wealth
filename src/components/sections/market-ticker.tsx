@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "@/lib/api-config";
 // Shape of /api/market-snapshot/. DRF serialises decimals as strings.
 interface MarketSnapshot {
     snapshot_date: string;
@@ -50,9 +51,8 @@ export function MarketTicker() {
     useEffect(() => {
         const controller = new AbortController();
         const fetchMarketSnapshot = async () => {
-            const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://solidwealthindia.com";
             try {
-                const res = await fetch(`${baseUrl}/api/market-snapshot/`, { signal: controller.signal });
+                const res = await fetch(`${API_BASE_URL}/api/market-snapshot/`, { signal: controller.signal });
                 // 404 means no snapshot has been stored yet, which is a normal
                 // state (e.g. a fresh local database), not a failure.
                 if (res.status === 404)
