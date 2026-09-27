@@ -6,6 +6,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { ChatbotFloat } from "@/components/ui/chatbot-float";
 import { JsonLd } from "@/components/seo/json-ld";
 import { SITE_NAME, SITE_URL, organizationJsonLd, webSiteJsonLd } from "@/lib/seo";
+import { Analytics } from "@vercel/analytics/next";
 import "@/styles/globals.css";
 const sora = Sora({
     subsets: ["latin"],
@@ -71,6 +72,7 @@ export default function RootLayout({ children, }: Readonly<{
         <main>{children}</main>
         <Footer />
         <ChatbotFloat />
+        <Analytics />
       </body>
     </html>);
 }
