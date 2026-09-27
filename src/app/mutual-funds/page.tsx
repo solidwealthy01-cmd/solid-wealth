@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function MutualFundsResearchPage() {
   return (
     <div className="min-h-screen bg-[#FFFDF7] pt-28 pb-20 sm:pt-36 sm:pb-24 lg:pt-40">
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6">
+      <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-6">
         {/* Breadcrumb matching Screenshot 1 */}
         <nav
           aria-label="Breadcrumb"

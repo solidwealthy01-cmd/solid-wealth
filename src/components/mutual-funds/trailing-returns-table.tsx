@@ -52,7 +52,9 @@ function SortIcon({ active, dir }: { active: boolean; dir: "asc" | "desc" }) {
 export function TrailingReturnsTable() {
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [categoriesStatus, setCategoriesStatus] = useState<LoadStatus>("loading");
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedGroup, setSelectedGroup] = useState<string>("All");
+  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+  const [allFundsCache, setAllFundsCache] = useState<FundPerformance[] | null>(null);
   const [funds, setFunds] = useState<FundPerformance[]>([]);
   const [fundsStatus, setFundsStatus] = useState<LoadStatus>("loading");
   const [reloadKey, setReloadKey] = useState(0);
@@ -79,10 +81,6 @@ export function TrailingReturnsTable() {
         if (controller.signal.aborted) return;
         setCategories(payload);
         setCategoriesStatus("ready");
-
-        if (payload.length > 0 && !selectedCategory) {
-          setSelectedCategory(payload[0].category);
-        }
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
         console.error("Failed to load mutual fund categories:", err);
@@ -93,21 +91,55 @@ export function TrailingReturnsTable() {
     return () => controller.abort();
   }, []);
 
-  // Load funds for the selected category
+  // Load funds: loads all funds once and filters in-memory for instant response
   useEffect(() => {
-    if (!selectedCategory) return;
     const controller = new AbortController();
     const load = async () => {
       setFundsStatus("loading");
-      const params = new URLSearchParams({ category: selectedCategory });
       try {
-        const res = await fetch(`${API_BASE_URL}/api/mutual-fund-performance/?${params}`, {
-          signal: controller.signal,
-        });
-        if (!res.ok) throw new Error(`Fund performance request failed with ${res.status}`);
-        const payload: FundPerformance[] = await res.json();
+        let fullList = allFundsCache;
+        if (!fullList) {
+          const res = await fetch(`${API_BASE_URL}/api/mutual-fund-performance/`, {
+            signal: controller.signal,
+          });
+          if (!res.ok) throw new Error(`Fund performance request failed with ${res.status}`);
+          fullList = await res.json();
+          if (controller.signal.aborted) return;
+          setAllFundsCache(fullList);
+        }
+
         if (controller.signal.aborted) return;
-        setFunds(payload);
+
+        let filtered: FundPerformance[] = fullList || [];
+
+        if (selectedCategory === "ALL" || !selectedCategory) {
+          filtered = fullList || [];
+        } else if (selectedCategory === "ALL_EQUITY") {
+          filtered = (fullList || []).filter((f) =>
+            f.category?.toLowerCase().startsWith("equity")
+          );
+        } else if (selectedCategory === "ALL_DEBT") {
+          filtered = (fullList || []).filter((f) =>
+            f.category?.toLowerCase().startsWith("debt")
+          );
+        } else if (selectedCategory === "ALL_HYBRID") {
+          filtered = (fullList || []).filter((f) =>
+            f.category?.toLowerCase().startsWith("hybrid")
+          );
+        } else if (selectedCategory === "ALL_OTHER") {
+          filtered = (fullList || []).filter((f) => {
+            const cat = f.category?.toLowerCase() || "";
+            return (
+              !cat.startsWith("equity") &&
+              !cat.startsWith("debt") &&
+              !cat.startsWith("hybrid")
+            );
+          });
+        } else {
+          filtered = (fullList || []).filter((f) => f.category === selectedCategory);
+        }
+
+        setFunds(filtered);
         setFundsStatus("ready");
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
@@ -117,7 +149,7 @@ export function TrailingReturnsTable() {
     };
     load();
     return () => controller.abort();
-  }, [selectedCategory, reloadKey]);
+  }, [selectedCategory, reloadKey, allFundsCache]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -230,7 +262,7 @@ export function TrailingReturnsTable() {
         <button
           type="button"
           onClick={retry}
-          className="font-bold text-[#0B63E5] hover:underline cursor-pointer"
+          className="font-bold text-[#fe9800] hover:underline cursor-pointer"
         >
           Retry
         </button>
@@ -239,8 +271,6 @@ export function TrailingReturnsTable() {
   } else if (visibleFunds.length === 0) {
     tableMessage = funds.length === 0 ? "No schemes in this category." : "No schemes match your search.";
   }
-
-  const [selectedGroup, setSelectedGroup] = useState<string>("All");
 
   const categoryGroups = useMemo(() => {
     const groups: Record<string, CategoryOption[]> = {
@@ -271,29 +301,70 @@ export function TrailingReturnsTable() {
     return categoryGroups[selectedGroup] || categories;
   }, [categories, selectedGroup, categoryGroups]);
 
+  const handleGroupSelect = (grp: string) => {
+    setSelectedGroup(grp);
+    if (grp === "All") {
+      setSelectedCategory("ALL");
+    } else if (grp === "Equity") {
+      setSelectedCategory("ALL_EQUITY");
+    } else if (grp === "Debt") {
+      setSelectedCategory("ALL_DEBT");
+    } else if (grp === "Hybrid") {
+      setSelectedCategory("ALL_HYBRID");
+    } else if (grp === "Other") {
+      setSelectedCategory("ALL_OTHER");
+    }
+  };
+
+  const handleCategoryChange = (val: string) => {
+    setSelectedCategory(val);
+    if (val === "ALL") {
+      setSelectedGroup("All");
+    } else if (val === "ALL_EQUITY") {
+      setSelectedGroup("Equity");
+    } else if (val === "ALL_DEBT") {
+      setSelectedGroup("Debt");
+    } else if (val === "ALL_HYBRID") {
+      setSelectedGroup("Hybrid");
+    } else if (val === "ALL_OTHER") {
+      setSelectedGroup("Other");
+    } else {
+      const lower = val.toLowerCase();
+      if (lower.startsWith("equity")) {
+        setSelectedGroup("Equity");
+      } else if (lower.startsWith("debt")) {
+        setSelectedGroup("Debt");
+      } else if (lower.startsWith("hybrid")) {
+        setSelectedGroup("Hybrid");
+      } else {
+        setSelectedGroup("Other");
+      }
+    }
+  };
+
   return (
     <div className="w-full space-y-4">
       {/* Category selector strip */}
       {categories.length > 1 && (
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-gray-100">
+        <div className="rounded-xl border border-gray-200 bg-white p-3.5 sm:p-4 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             {/* Asset Class Filter Tabs */}
-            <div className="flex items-center gap-1.5 overflow-x-auto">
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
               {["All", "Equity", "Debt", "Hybrid", "Other"].map((grp) => {
                 const count = grp === "All" ? categories.length : (categoryGroups[grp]?.length || 0);
                 if (count === 0 && grp !== "All") return null;
                 return (
                   <button
                     key={grp}
-                    onClick={() => setSelectedGroup(grp)}
+                    onClick={() => handleGroupSelect(grp)}
                     className={cn(
                       "px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer whitespace-nowrap",
                       selectedGroup === grp
-                        ? "bg-[#0B63E5] text-white shadow-xs"
-                        : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+                        ? "bg-[#fe9800] text-white shadow-xs"
+                        : "bg-orange-50/70 text-gray-700 border border-orange-100/80 hover:border-orange-200 hover:bg-orange-100/60 hover:text-[#e65100]"
                     )}
                   >
-                    {grp} <span className="opacity-75 text-[10px]">({count})</span>
+                    {grp} <span className="opacity-80 text-[10px]">({count})</span>
                   </button>
                 );
               })}
@@ -304,43 +375,58 @@ export function TrailingReturnsTable() {
               <span className="text-xs font-semibold text-gray-500 whitespace-nowrap">Select:</span>
               <select
                 value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-gray-800 outline-none focus:border-[#0B63E5] cursor-pointer max-w-[220px]"
+                onChange={(e) => handleCategoryChange(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-gray-800 outline-none focus:border-[#fe9800] cursor-pointer min-w-[200px] sm:min-w-[260px]"
               >
-                {categories.map((cat) => (
-                  <option key={cat.category} value={cat.category}>
-                    {cat.category}
-                  </option>
-                ))}
+                {selectedGroup === "All" ? (
+                  <>
+                    <option value="ALL">All Categories ({categories.length})</option>
+                    {categories.map((cat) => (
+                      <option key={cat.category} value={cat.category}>
+                        {cat.category}
+                      </option>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    {selectedGroup === "Equity" && (
+                      <option value="ALL_EQUITY">
+                        All Equity ({categoryGroups.Equity?.length || 0} Categories)
+                      </option>
+                    )}
+                    {selectedGroup === "Debt" && (
+                      <option value="ALL_DEBT">
+                        All Debt ({categoryGroups.Debt?.length || 0} Categories)
+                      </option>
+                    )}
+                    {selectedGroup === "Hybrid" && (
+                      <option value="ALL_HYBRID">
+                        All Hybrid ({categoryGroups.Hybrid?.length || 0} Categories)
+                      </option>
+                    )}
+                    {selectedGroup === "Other" && (
+                      <option value="ALL_OTHER">
+                        All Other ({categoryGroups.Other?.length || 0} Categories)
+                      </option>
+                    )}
+                    {displayedCategories.map((cat) => (
+                      <option key={cat.category} value={cat.category}>
+                        {cat.category}
+                      </option>
+                    ))}
+                  </>
+                )}
               </select>
             </div>
-          </div>
-
-          {/* Category Pills inside the selected group */}
-          <div className="flex flex-wrap items-center gap-1.5 max-h-36 overflow-y-auto pt-1">
-            {displayedCategories.map((cat) => (
-              <button
-                key={cat.category}
-                onClick={() => setSelectedCategory(cat.category)}
-                className={cn(
-                  "px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer",
-                  selectedCategory === cat.category
-                    ? "bg-[#0B63E5] text-white shadow-2xs"
-                    : "bg-gray-50 border border-gray-200/80 text-gray-700 hover:bg-orange-50 hover:border-orange-200"
-                )}
-              >
-                {cat.category}
-              </button>
-            ))}
           </div>
         </div>
       )}
 
       {/* Top Filter & Action Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        {/* Search input with Blue Icon Button */}
+        {/* Search input with Brand Icon Button */}
         <div className="flex items-center w-full sm:w-80 rounded-md border border-gray-300 bg-white overflow-hidden shadow-2xs">
-          <div className="flex items-center justify-center bg-[#0B63E5] px-3.5 py-2.5 text-white">
+          <div className="flex items-center justify-center bg-[#fe9800] px-3.5 py-2.5 text-white">
             <Search className="size-4" />
           </div>
           <input
@@ -361,7 +447,7 @@ export function TrailingReturnsTable() {
               onChange={(e) =>
                 setPageSize(e.target.value === "All" ? "All" : Number(e.target.value))
               }
-              className="rounded border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-800 outline-none cursor-pointer focus:border-[#0B63E5]"
+              className="rounded border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-800 outline-none cursor-pointer focus:border-[#fe9800]"
             >
               <option value="All">All</option>
               <option value={10}>10</option>
@@ -575,10 +661,15 @@ export function TrailingReturnsTable() {
                         category: fund.category,
                         scheme: fund.scheme_name,
                       })}`}
-                      className="text-[#0B63E5] hover:text-[#0952be] hover:underline transition-colors"
+                      className="text-[#0B63E5] hover:text-[#084bb3] hover:underline font-bold transition-colors"
                     >
                       {fund.scheme_name}
                     </Link>
+                    {fund.category && (
+                      <span className="block text-[10px] text-gray-400 font-normal mt-0.5">
+                        {fund.category}
+                      </span>
+                    )}
                   </td>
 
                   <td className="px-2.5 py-3 text-center text-gray-600 whitespace-nowrap">

@@ -524,25 +524,9 @@ export default function BlogDetailPage() {
           </aside>
         </div>
 
-        {/* Bottom All Topics Tag Cloud (Matching Groww Screenshot 3) */}
-        <div className="pt-12 mt-12 border-t border-gray-200 space-y-4">
-          <h3 className="text-base font-black text-[#1a2332]">All Topics</h3>
-          <div className="flex flex-wrap gap-2">
-            {ALL_TOPIC_TAGS.map((tag) => (
-              <Link
-                key={tag}
-                href={`/blog?topic=${encodeURIComponent(tag)}`}
-                className="px-3.5 py-1.5 rounded-full text-xs font-bold border border-gray-200 bg-white text-gray-700 hover:border-orange-300 hover:bg-orange-50/70 hover:text-[#e65100] transition-colors"
-              >
-                {tag}
-              </Link>
-            ))}
-          </div>
-
-          {/* Breadcrumb bottom line */}
-          <div className="pt-4 text-xs text-gray-400">
-            Home &gt; Blog &gt; {article.category} &gt; {article.title}
-          </div>
+        {/* Breadcrumb bottom line */}
+        <div className="pt-8 mt-12 border-t border-gray-200 text-xs text-gray-400">
+          Home &gt; Blog &gt; {article.category} &gt; {article.title}
         </div>
       </div>
     </div>

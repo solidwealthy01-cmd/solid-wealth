@@ -524,29 +524,6 @@ export default function BlogHomePage() {
             )}
           </div>
         )}
-
-        {/* ALL TOPICS PILL CLOUD (MATCHING GROWW SCREENSHOT 3 EXACTLY) */}
-        <div className="pt-10 border-t border-gray-200 space-y-4">
-          <h3 className="text-base font-black text-[#1a2332]">All Topics</h3>
-          <div className="flex flex-wrap gap-2">
-            {ALL_TOPIC_TAGS.map((tag) => (
-              <button
-                key={tag}
-                onClick={() => {
-                  setSelectedTopic(tag === selectedTopic ? null : tag);
-                  setSelectedCategory("all");
-                }}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer ${
-                  selectedTopic === tag
-                    ? "bg-[#fe9800] text-white border-[#fe9800] shadow-sm shadow-orange-500/20"
-                    : "bg-white text-gray-700 border-gray-200 hover:border-orange-300 hover:bg-orange-50/70 hover:text-[#e65100]"
-                }`}
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );

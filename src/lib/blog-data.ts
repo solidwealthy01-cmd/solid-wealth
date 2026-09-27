@@ -462,7 +462,7 @@ export const BLOG_ARTICLES: BlogArticle[] = [
     readTime: "2 min read",
     category: "News",
     categorySlug: "news",
-    image: "https://images.unsplash.com/photo-1541888946425-d0fbb186156f?q=80&w=1200&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1200&auto=format&fit=crop",
     author: {
       name: "Rajesh Menon",
       role: "Infrastructure Research",
