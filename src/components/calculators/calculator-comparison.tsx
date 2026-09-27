@@ -14,7 +14,12 @@ import {
   CheckCircle2,
   Layers,
   HelpCircle,
+  Download,
+  FileText,
+  X,
+  Award,
 } from "lucide-react";
+import { exportElementsToPdf } from "@/lib/pdf-export";
 import {
   ResponsiveContainer,
   LineChart,
@@ -466,6 +471,29 @@ export function CalculatorComparisonView() {
     return [...computedStrategies].sort((a, b) => b.finalValue - a.finalValue)[1];
   }, [computedStrategies]);
 
+  const [showPreview, setShowPreview] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    setIsDownloading(true);
+    const wasPreviewOpen = showPreview;
+    if (!wasPreviewOpen) setShowPreview(true);
+
+    setTimeout(async () => {
+      try {
+        await exportElementsToPdf({
+          pageIds: ["compare-pdf-report-page-1", "compare-pdf-report-page-2"],
+          filename: `solid_wealth_strategy_comparison_${syncedYears}yr.pdf`,
+        });
+        setIsDownloading(false);
+        if (!wasPreviewOpen) setShowPreview(false);
+      } catch (err) {
+        console.error("Error generating comparison PDF", err);
+        setIsDownloading(false);
+      }
+    }, 500);
+  };
+
   return (
     <div className="w-full space-y-8 animate-fadeIn">
       {/* Top Banner & View Switcher */}
@@ -483,30 +511,54 @@ export function CalculatorComparisonView() {
             </p>
           </div>
 
-          {/* View Mode Switcher */}
-          <div className="flex bg-white p-1 rounded-xl border border-blue-200 shadow-2xs self-start lg:self-auto">
-            <button
-              onClick={() => setViewMode("combined")}
-              className={cn(
-                "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
-                viewMode === "combined"
-                  ? "bg-[#0B63E5] text-white shadow-xs"
-                  : "text-gray-600 hover:text-gray-900"
-              )}
-            >
-              Combined Portfolio Total
-            </button>
-            <button
-              onClick={() => setViewMode("compare")}
-              className={cn(
-                "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
-                viewMode === "compare"
-                  ? "bg-[#0B63E5] text-white shadow-xs"
-                  : "text-gray-600 hover:text-gray-900"
-              )}
-            >
-              Compare Side-by-Side
-            </button>
+          {/* Controls: View Mode Switcher + PDF Export */}
+          <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-auto">
+            {/* View Mode Switcher */}
+            <div className="flex bg-white p-1 rounded-xl border border-blue-200 shadow-2xs">
+              <button
+                onClick={() => setViewMode("combined")}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                  viewMode === "combined"
+                    ? "bg-[#0B63E5] text-white shadow-xs"
+                    : "text-gray-600 hover:text-gray-900"
+                )}
+              >
+                Combined Total
+              </button>
+              <button
+                onClick={() => setViewMode("compare")}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                  viewMode === "compare"
+                    ? "bg-[#0B63E5] text-white shadow-xs"
+                    : "text-gray-600 hover:text-gray-900"
+                )}
+              >
+                Compare Side-by-Side
+              </button>
+            </div>
+
+            {/* PDF Report Export Buttons */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowPreview(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 bg-white text-gray-700 text-xs font-bold hover:bg-blue-50 transition-colors shadow-2xs cursor-pointer"
+              >
+                <FileText size={15} className="text-[#0B63E5]" />
+                <span className="hidden sm:inline">View in</span> PDF
+              </button>
+              <button
+                type="button"
+                onClick={handleDownloadPDF}
+                disabled={isDownloading}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#fe9800] text-white text-xs font-bold hover:bg-[#e58900] transition-colors shadow-2xs disabled:opacity-70 cursor-pointer"
+              >
+                <Download size={15} />
+                <span>{isDownloading ? "Generating..." : "Download PDF"}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -999,6 +1051,391 @@ export function CalculatorComparisonView() {
                 </span>{" "}
                 more than {runnerUp.title}.
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MULTI-PAGE PDF PREVIEW MODAL */}
+      {showPreview && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4 print:p-0 print:bg-white print:relative print:block print:inset-auto"
+          onClick={() => setShowPreview(false)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-5xl w-full h-[95vh] sm:h-[88vh] overflow-hidden flex flex-col print:h-auto print:overflow-visible print:w-full print:max-w-none print:shadow-none print:rounded-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 sm:p-6 border-b print:hidden">
+              <div>
+                <h3 className="font-bold text-xl text-[#1a2332]">Strategy Comparison Report Preview (2 Pages)</h3>
+                <p className="text-xs text-gray-500">
+                  Page 1: Executive Summary & Strategy Rankings • Page 2: Mathematical Algorithms, Tax Insights & Trajectory Schedule
+                </p>
+              </div>
+              <div className="flex gap-2 sm:gap-4 w-full sm:w-auto">
+                <button
+                  onClick={handleDownloadPDF}
+                  disabled={isDownloading}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-[#fe9800] text-white text-sm font-bold hover:bg-[#e58900] transition-colors shadow-md shadow-orange-500/20 disabled:opacity-70 cursor-pointer"
+                >
+                  <Download size={16} /> {isDownloading ? "Generating..." : "Save 2-Page PDF"}
+                </button>
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="w-10 sm:w-9 h-10 sm:h-9 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 rounded-full text-gray-500 font-bold border border-gray-200 sm:border-transparent cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable Preview Area for Both Pages */}
+            <div className="flex-1 overflow-auto bg-gray-100/80 p-4 sm:p-8 flex flex-col items-center gap-8 print:bg-white print:p-0">
+              {/* PAGE 1: EXECUTIVE SUMMARY */}
+              <div className="flex flex-col items-center">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 print:hidden">
+                  Page 1 of 2: Executive Summary & Comparison
+                </span>
+                <div
+                  id="compare-pdf-report-page-1"
+                  className="w-[794px] min-w-[794px] h-[1123px] bg-white shadow-xl print:shadow-none relative overflow-hidden flex-shrink-0"
+                >
+                  <img src="/Printable.svg" alt="Template Header" className="w-full h-auto object-cover opacity-80" />
+
+                  <div className="absolute top-0 left-0 w-full h-full pt-[220px] px-14 flex flex-col pb-20 justify-between">
+                    <div>
+                      {/* Title Header */}
+                      <div className="flex justify-between items-end border-b-2 border-gray-100 pb-4 mb-4">
+                        <div>
+                          <span className="text-xs font-bold tracking-widest text-[#fe9800] uppercase">
+                            Solid Wealth Financial Report
+                          </span>
+                          <h1 className="text-2xl font-black text-[#1a2332]">
+                            Strategy Comparison & Portfolio Analysis
+                          </h1>
+                        </div>
+                        <span className="text-xs font-bold text-gray-400">Page 1 of 2</span>
+                      </div>
+
+                      {/* Horizon & Mode Banner */}
+                      <div className="bg-[#F0F6FF] border border-blue-200 rounded-xl px-4 py-2.5 mb-5 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-bold text-[#0B63E5] uppercase tracking-wider">Evaluation Horizon:</span>
+                          <span className="text-xs text-gray-800 font-bold">{syncedYears} Years</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-gray-500 font-semibold">Strategies Analyzed:</span>
+                          <span className="text-xs font-bold text-gray-800">{strategies.length} Distinct Portfolios</span>
+                        </div>
+                        {winner && (
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
+                            <span>Top Performer:</span>
+                            <span>{winner.title}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 4 Executive Summary KPI Cards */}
+                      <div className="grid grid-cols-4 gap-3 mb-6">
+                        <div className="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-2xs">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Combined Outlay</p>
+                          <p className="text-base font-black text-[#1a2332] mt-0.5">₹{formatINR(combinedTotals.totalInvested)}</p>
+                          <p className="text-[9px] text-gray-500 mt-0.5">Total capital invested</p>
+                        </div>
+
+                        <div className="rounded-xl border border-blue-200 bg-[#F0F6FF] p-3 text-center shadow-2xs">
+                          <p className="text-[10px] font-bold text-[#0B63E5] uppercase tracking-wider">Top Strategy Corpus</p>
+                          <p className="text-base font-black text-[#0B63E5] mt-0.5">₹{formatINR(winner?.finalValue || 0)}</p>
+                          <p className="text-[9px] text-blue-700 mt-0.5">{winner?.growthMultiplier}x Capital Multiplier</p>
+                        </div>
+
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-center shadow-2xs">
+                          <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">Top Strategy Gains</p>
+                          <p className="text-base font-black text-emerald-700 mt-0.5">+₹{formatINR(winner?.finalGains || 0)}</p>
+                          <p className="text-[9px] text-emerald-800 mt-0.5">
+                            +{(((winner?.finalGains || 0) / Math.max(winner?.finalInvested || 1, 1)) * 100).toFixed(1)}% Gain on Capital
+                          </p>
+                        </div>
+
+                        <div className="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-2xs">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Wealth Spread Gap</p>
+                          <p className="text-base font-black text-orange-600 mt-0.5">
+                            {runnerUp ? `₹${formatINR(Math.abs((winner?.finalValue || 0) - runnerUp.finalValue))}` : "N/A"}
+                          </p>
+                          <p className="text-[9px] text-gray-500 mt-0.5">Winner vs Runner-Up</p>
+                        </div>
+                      </div>
+
+                      {/* Side-by-Side Detailed Strategy Comparison Table */}
+                      <div className="border border-gray-200 rounded-xl overflow-hidden mb-6 shadow-2xs">
+                        <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex justify-between items-center">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-gray-700">
+                            Comparative Strategy Performance Breakdown
+                          </span>
+                          <span className="text-[10px] text-gray-500 font-medium">Over {syncedYears} Year Horizon</span>
+                        </div>
+                        <table className="w-full text-xs text-left">
+                          <thead className="bg-gray-50/60 text-gray-500 font-bold border-b border-gray-100 text-[10px] uppercase">
+                            <tr>
+                              <th className="py-2.5 px-3">Strategy Name</th>
+                              <th className="py-2.5 px-3 text-right">Contribution Input</th>
+                              <th className="py-2.5 px-3 text-center">CAGR %</th>
+                              <th className="py-2.5 px-3 text-right">Total Invested</th>
+                              <th className="py-2.5 px-3 text-right">Compounding Gains</th>
+                              <th className="py-2.5 px-3 text-right font-black">Final Corpus</th>
+                              <th className="py-2.5 px-3 text-center">Multiple</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 text-gray-800">
+                            {computedStrategies.map((s) => {
+                              const isTop = winner && s.id === winner.id;
+                              return (
+                                <tr key={s.id} className={isTop ? "bg-amber-50/40 font-semibold" : "bg-white"}>
+                                  <td className="py-2.5 px-3">
+                                    <div className="flex items-center gap-2">
+                                      <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                                      <span className="font-bold text-[#1a2332]">{s.title}</span>
+                                      {isTop && (
+                                        <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 text-[9px] font-extrabold rounded">
+                                          LEADER
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right text-gray-600">
+                                    {s.monthlyAmount ? `₹${formatINR(s.monthlyAmount)}/mo` : `₹${formatINR(s.initialInvestment || 0)}`}
+                                    {s.stepUpPercent ? ` (+${s.stepUpPercent}%)` : ""}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-center font-bold text-gray-700">{s.expectedReturn}%</td>
+                                  <td className="py-2.5 px-3 text-right text-gray-600">₹{formatINR(s.finalInvested)}</td>
+                                  <td className="py-2.5 px-3 text-right text-emerald-600 font-bold">+₹{formatINR(s.finalGains)}</td>
+                                  <td className="py-2.5 px-3 text-right font-black text-[#1a2332]">₹{formatINR(s.finalValue)}</td>
+                                  <td className="py-2.5 px-3 text-center font-bold text-[#0B63E5]">{s.growthMultiplier}x</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Visual Relative Wealth Growth Bar Cards */}
+                      <div className="bg-[#FFFDF7] border border-orange-200/80 rounded-xl p-4 shadow-2xs">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-700 block mb-3">
+                          Relative Wealth Creation Comparison
+                        </span>
+                        <div className="space-y-3">
+                          {computedStrategies.map((s) => {
+                            const maxVal = Math.max(...computedStrategies.map((cs) => cs.finalValue), 1);
+                            const widthPercent = Math.max(15, (s.finalValue / maxVal) * 100);
+                            return (
+                              <div key={s.id} className="space-y-1">
+                                <div className="flex justify-between text-xs">
+                                  <span className="font-bold text-gray-800">{s.title}</span>
+                                  <span className="font-extrabold text-[#1a2332]">
+                                    ₹{formatINR(s.finalValue)} ({s.growthMultiplier}x)
+                                  </span>
+                                </div>
+                                <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden flex">
+                                  <div
+                                    className="h-full rounded-full transition-all"
+                                    style={{
+                                      width: `${widthPercent}%`,
+                                      backgroundColor: s.color,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Executive Decision Takeaway */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-[10px] text-gray-600 flex items-start gap-2">
+                      <span className="font-bold text-[#1a2332] uppercase shrink-0">Strategic Takeaway:</span>
+                      <span>
+                        {winner
+                          ? `${winner.title} achieves the greatest terminal corpus of ₹${formatINR(winner.finalValue)} over ${syncedYears} years. Disciplined regular investing combined with annual compounding provides superior risk-adjusted wealth creation.`
+                          : "Review comparative metrics above to determine optimal asset allocation for your goal horizon."}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* PAGE 2: ALGORITHM & GROWTH TRAJECTORY */}
+              <div className="flex flex-col items-center">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 print:hidden">
+                  Page 2 of 2: Algorithm, Calculation Details & Schedule
+                </span>
+                <div
+                  id="compare-pdf-report-page-2"
+                  className="w-[794px] min-w-[794px] h-[1123px] bg-white shadow-xl print:shadow-none relative overflow-hidden flex-shrink-0"
+                >
+                  <img
+                    src="/Printable.svg"
+                    alt="Template Background"
+                    className="w-full h-auto object-cover opacity-80 absolute top-0 left-0 pointer-events-none"
+                  />
+
+                  <div className="relative z-10 w-full h-full pt-[220px] px-14 flex flex-col pb-20 justify-between">
+                    <div>
+                      {/* Header */}
+                      <div className="flex justify-between items-end border-b-2 border-gray-100 pb-3 mb-3">
+                        <div>
+                          <span className="text-[10px] font-bold tracking-widest text-[#fe9800] uppercase">
+                            Calculation Methodology & Details
+                          </span>
+                          <h2 className="text-2xl font-black text-[#1a2332]">Strategy Algorithm & Growth Trajectory</h2>
+                        </div>
+                        <span className="text-xs font-bold text-gray-400">Page 2 of 2</span>
+                      </div>
+
+                      {/* ALGORITHM DEFINITIONS & FORMULAS CARD */}
+                      <div className="bg-[#FFFDF4] border border-orange-100 rounded-xl p-3.5 mb-3 shadow-2xs">
+                        <div className="flex justify-between items-center mb-2 pb-1.5 border-b border-orange-100/70">
+                          <span className="text-[11px] font-bold text-[#1a2332] uppercase tracking-wider">
+                            Mathematical Formulation & Compounding Engine
+                          </span>
+                          <span className="text-[10px] font-mono font-bold text-[#fe9800] bg-white px-2 py-0.5 rounded border border-orange-200">
+                            Monthly Compounding Annuity Models
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-[10px] text-gray-700 mb-2">
+                          <div className="bg-white/80 p-2 rounded border border-orange-100">
+                            <span className="font-bold text-[#0B63E5] block mb-0.5">Mutual Fund SIP Formula:</span>
+                            <code className="font-mono text-[9.5px] text-gray-800">
+                              M = P × [((1 + i)^n - 1) / i] × (1 + i)
+                            </code>
+                            <p className="text-[8.5px] text-gray-500 mt-1">
+                              Where P = monthly SIP, i = monthly return rate (r/12), n = total months.
+                            </p>
+                          </div>
+
+                          <div className="bg-white/80 p-2 rounded border border-orange-100">
+                            <span className="font-bold text-[#fe9800] block mb-0.5">Step-Up SIP Formula:</span>
+                            <code className="font-mono text-[9.5px] text-gray-800">
+                              M_total = Σ P_y × [((1 + i)^12 - 1) / i] × (1+r)^(N-y)
+                            </code>
+                            <p className="text-[8.5px] text-gray-500 mt-1">
+                              Where P_y increases annually by step-up rate g% (P_y = P_0 × (1+g)^(y-1)).
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="text-[9.5px] text-gray-600 space-y-0.5">
+                          <span className="font-bold text-gray-700 uppercase tracking-wider text-[9px] block">
+                            Calculation Mechanics:
+                          </span>
+                          <p>1. Geometric compounding calculated month-by-month at constant annualized expected CAGR.</p>
+                          <p>2. Cash flows assumed at the start of each periodic cycle (annuity due) maximizing compounding.</p>
+                          <p>3. Nominal returns reflect pre-tax values; see taxation KPI for net realization guidance.</p>
+                        </div>
+                      </div>
+
+                      {/* 4 Analytical KPI Cards */}
+                      <div className="grid grid-cols-4 gap-2 mb-3">
+                        <div className="border border-gray-200 bg-gray-50 rounded-xl p-2 text-center">
+                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Disciplined Growth</p>
+                          <p className="text-sm font-black text-[#1a2332]">
+                            {winner ? `₹${formatINR(winner.finalValue / Math.max(syncedYears * 12, 1))}/mo` : "-"}
+                          </p>
+                          <p className="text-[8.5px] text-gray-500 mt-0.5">Avg corpus growth rate</p>
+                        </div>
+
+                        <div className="border border-orange-200 bg-[#FFFDF4] rounded-xl p-2 text-center">
+                          <p className="text-[9px] font-bold text-orange-600 uppercase tracking-wider mb-0.5">Opportunity Cost</p>
+                          <p className="text-sm font-black text-orange-600">
+                            {runnerUp ? `₹${formatINR(Math.abs((winner?.finalValue || 0) - runnerUp.finalValue))}` : "₹0"}
+                          </p>
+                          <p className="text-[8.5px] text-gray-500 mt-0.5">Gained by picking top fund</p>
+                        </div>
+
+                        <div className="border border-gray-200 bg-gray-50 rounded-xl p-2 text-center">
+                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Tax Efficiency</p>
+                          <p className="text-sm font-black text-emerald-700">12.5% LTCG</p>
+                          <p className="text-[8.5px] text-gray-500 mt-0.5">On equity gains &gt; ₹1.25L</p>
+                        </div>
+
+                        <div className="border border-gray-200 bg-gray-50 rounded-xl p-2 text-center">
+                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Inflation Factor (6%)</p>
+                          <p className="text-sm font-black text-[#0B63E5]">
+                            {winner ? `₹${formatINR(winner.finalValue / Math.pow(1.06, syncedYears))}` : "-"}
+                          </p>
+                          <p className="text-[8.5px] text-gray-500 mt-0.5">Real purchasing power</p>
+                        </div>
+                      </div>
+
+                      {/* Growth Trajectory Schedule Table */}
+                      <div className="border border-gray-200 rounded-xl overflow-hidden mb-3">
+                        <div className="bg-gray-50 px-3.5 py-1.5 border-b border-gray-200 flex justify-between items-center">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-700">
+                            Year-by-Year Growth Trajectory Comparison
+                          </span>
+                          <span className="text-[9.5px] text-gray-500">Corpus Balance (₹)</span>
+                        </div>
+                        <table className="w-full text-[10.5px] text-left">
+                          <thead className="bg-gray-50/70 text-gray-500 font-bold border-b border-gray-100 text-[9.5px] uppercase">
+                            <tr>
+                              <th className="py-2 px-3">Timeline</th>
+                              {computedStrategies.map((s) => (
+                                <th key={s.id} className="py-2 px-3 text-right">
+                                  {s.title}
+                                </th>
+                              ))}
+                              {computedStrategies.length >= 2 && (
+                                <th className="py-2 px-3 text-right font-black text-[#fe9800]">Outperformance</th>
+                              )}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 text-gray-800">
+                            {/* Sample milestone years up to syncedYears */}
+                            {Array.from(new Set([1, 2, 3, 5, 7, 10, 15, 20, 25, 30].filter((y) => y <= syncedYears).concat(syncedYears)))
+                              .sort((a, b) => a - b)
+                              .map((yr) => {
+                                const vals = computedStrategies.map((s) => {
+                                  const pt = s.yearlyData.find((d) => d.year === yr);
+                                  return pt ? pt.value : 0;
+                                });
+                                const maxVal = Math.max(...vals);
+                                const minVal = Math.min(...vals);
+                                const diff = maxVal - minVal;
+
+                                return (
+                                  <tr key={yr} className={yr === syncedYears ? "bg-amber-50/50 font-bold" : "hover:bg-gray-50/50"}>
+                                    <td className="py-2 px-3 font-semibold text-gray-800">Year {yr}</td>
+                                    {computedStrategies.map((s) => {
+                                      const pt = s.yearlyData.find((d) => d.year === yr);
+                                      return (
+                                        <td key={s.id} className="py-2 px-3 text-right font-medium">
+                                          ₹{formatINR(pt ? pt.value : 0)}
+                                        </td>
+                                      );
+                                    })}
+                                    {computedStrategies.length >= 2 && (
+                                      <td className="py-2 px-3 text-right font-bold text-emerald-600">
+                                        +₹{formatINR(diff)}
+                                      </td>
+                                    )}
+                                  </tr>
+                                );
+                              })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Disclaimer Note */}
+                    <div className="border-t border-gray-200 pt-2 text-[8.5px] text-gray-400 text-center">
+                      Mutual Fund investments are subject to market risks. Please read all scheme-related documents carefully before investing. Past performance is not indicative of future returns. Solid Wealth Services.
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export type ResearchArticleTocItem = {
@@ -11,22 +10,37 @@ export type ResearchArticleTocItem = {
 
 type ResearchArticleTocProps = {
   items: ResearchArticleTocItem[];
+  title?: string;
 };
 
-export function ResearchArticleToc({ items }: ResearchArticleTocProps) {
+export function ResearchArticleToc({
+  items,
+  title = "ON THIS PAGE",
+}: ResearchArticleTocProps) {
   const [activeId, setActiveId] = useState(items[0]?.id ?? "");
+  const [indicatorStyle, setIndicatorStyle] = useState<{
+    top: number;
+    height: number;
+    opacity: number;
+  }>({
+    top: 0,
+    height: 0,
+    opacity: 0,
+  });
 
+  const itemRefs = useRef<Map<string, HTMLAnchorElement>>(new Map());
+
+  // Update active section based on scroll
   useEffect(() => {
     let animationFrame: number | null = null;
 
     const updateActiveSection = () => {
       animationFrame = null;
-      const readingLine = 150;
+      const readingLine = 160;
       let nextActiveId = items[0]?.id ?? "";
 
       for (const item of items) {
         const section = document.getElementById(item.id);
-
         if (section && section.getBoundingClientRect().top <= readingLine) {
           nextActiveId = item.id;
         }
@@ -34,80 +48,104 @@ export function ResearchArticleToc({ items }: ResearchArticleTocProps) {
 
       const isAtPageEnd =
         window.innerHeight + window.scrollY >=
-        document.documentElement.scrollHeight - 8;
+        document.documentElement.scrollHeight - 20;
 
       if (isAtPageEnd && items.length > 0) {
         nextActiveId = items[items.length - 1].id;
       }
 
       setActiveId((currentId) =>
-        currentId === nextActiveId ? currentId : nextActiveId,
+        currentId === nextActiveId ? currentId : nextActiveId
       );
     };
 
-    const requestUpdate = () => {
-      if (animationFrame === null) {
-        animationFrame = window.requestAnimationFrame(updateActiveSection);
-      }
-    };
-
     updateActiveSection();
-    window.addEventListener("scroll", requestUpdate, { passive: true });
-    window.addEventListener("resize", requestUpdate);
-    window.addEventListener("hashchange", requestUpdate);
+    window.addEventListener("scroll", updateActiveSection, { passive: true });
+    window.addEventListener("resize", updateActiveSection);
+    window.addEventListener("hashchange", updateActiveSection);
 
     return () => {
-      window.removeEventListener("scroll", requestUpdate);
-      window.removeEventListener("resize", requestUpdate);
-      window.removeEventListener("hashchange", requestUpdate);
-
-      if (animationFrame !== null) {
-        window.cancelAnimationFrame(animationFrame);
-      }
+      window.removeEventListener("scroll", updateActiveSection);
+      window.removeEventListener("resize", updateActiveSection);
+      window.removeEventListener("hashchange", updateActiveSection);
     };
   }, [items]);
 
-  return (
-    <nav aria-label="Table of contents" className="mt-4">
-      <ol className="space-y-1">
-        {items.map((item, index) => {
-          const isActive = activeId === item.id;
+  // Update sliding indicator position whenever activeId or items change
+  useEffect(() => {
+    const updateIndicator = () => {
+      const activeEl = itemRefs.current.get(activeId);
+      if (activeEl) {
+        setIndicatorStyle({
+          top: activeEl.offsetTop,
+          height: activeEl.offsetHeight,
+          opacity: 1,
+        });
+      } else {
+        setIndicatorStyle((prev) => ({ ...prev, opacity: 0 }));
+      }
+    };
 
-          return (
-            <li key={item.id}>
-              <a
-                aria-current={isActive ? "location" : undefined}
-                className={cn(
-                  "group relative flex items-center gap-3 rounded-lg border-l-2 px-3 py-2.5 text-xs font-semibold transition-all duration-200",
-                  isActive
-                    ? "border-wealth-accent bg-wealth-accent-light/70 text-wealth-accent shadow-[inset_0_0_0_1px_rgba(254,152,0,0.08)]"
-                    : "border-transparent text-wealth-secondary hover:bg-wealth-accent-light/40 hover:text-wealth-accent",
-                )}
-                href={`#${item.id}`}
-                onClick={() => setActiveId(item.id)}
-              >
-                <span
+    updateIndicator();
+    const timer = setTimeout(updateIndicator, 50);
+    window.addEventListener("resize", updateIndicator);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", updateIndicator);
+    };
+  }, [activeId, items]);
+
+  if (items.length === 0) return null;
+
+  return (
+    <nav aria-label="Table of contents" className="w-full">
+      <div className="mb-3 text-[11px] font-bold tracking-wider text-slate-900 uppercase">
+        {title}
+      </div>
+
+      <div className="relative">
+        {/* Subtle continuous vertical rail track */}
+        <div className="absolute left-0 top-0 bottom-0 w-[1.5px] bg-slate-200" />
+
+        {/* Animated Sliding Orange Indicator Bar */}
+        <div
+          aria-hidden="true"
+          className="absolute left-0 -ml-[0.5px] w-[2.5px] rounded-full bg-[#fe9800] transition-all duration-250 ease-out pointer-events-none"
+          style={{
+            transform: `translateY(${indicatorStyle.top}px)`,
+            height: `${indicatorStyle.height || 20}px`,
+            opacity: indicatorStyle.opacity,
+          }}
+        />
+
+        <ul className="space-y-1 pl-3 text-[13px] leading-snug">
+          {items.map((item) => {
+            const isActive = activeId === item.id;
+
+            return (
+              <li key={item.id}>
+                <a
+                  ref={(el) => {
+                    if (el) itemRefs.current.set(item.id, el);
+                    else itemRefs.current.delete(item.id);
+                  }}
+                  href={`#${item.id}`}
+                  onClick={() => setActiveId(item.id)}
+                  aria-current={isActive ? "location" : undefined}
                   className={cn(
-                    "flex size-5 shrink-0 items-center justify-center rounded-md text-[9px] font-extrabold tabular-nums transition-colors",
+                    "block py-1 text-xs transition-colors duration-150",
                     isActive
-                      ? "bg-wealth-accent text-white"
-                      : "bg-wealth-surface-dim text-wealth-muted group-hover:bg-white group-hover:text-wealth-accent",
+                      ? "font-semibold text-[#fe9800]"
+                      : "text-slate-500 hover:text-slate-900"
                   )}
                 >
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <span className="min-w-0 flex-1">{item.label}</span>
-                {isActive && (
-                  <span
-                    aria-hidden="true"
-                    className="size-1.5 shrink-0 rounded-full bg-wealth-accent"
-                  />
-                )}
-              </a>
-            </li>
-          );
-        })}
-      </ol>
+                  {item.label}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </nav>
   );
 }

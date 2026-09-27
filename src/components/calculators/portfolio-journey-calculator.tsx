@@ -18,7 +18,11 @@ import {
   Sliders,
   PlayCircle,
   BarChart2,
+  Download,
+  FileText,
+  X,
 } from "lucide-react";
+import { exportElementsToPdf } from "@/lib/pdf-export";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -387,6 +391,57 @@ export function PortfolioJourneyCalculator() {
     };
   }, [initialCorpus, streams, totalTimelineYears]);
 
+  const [showPreview, setShowPreview] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    setIsDownloading(true);
+    const wasPreviewOpen = showPreview;
+    if (!wasPreviewOpen) setShowPreview(true);
+
+    setTimeout(async () => {
+      try {
+        await exportElementsToPdf({
+          pageIds: ["journey-pdf-report-page-1", "journey-pdf-report-page-2"],
+          filename: `solid_wealth_portfolio_journey_${totalTimelineYears}yr.pdf`,
+        });
+        setIsDownloading(false);
+        if (!wasPreviewOpen) setShowPreview(false);
+      } catch (err) {
+        console.error("Error generating portfolio journey PDF", err);
+        setIsDownloading(false);
+      }
+    }, 500);
+  };
+
+  const capitalMultiplier =
+    simulation.totalInvested > 0
+      ? (
+          (simulation.finalCorpus + simulation.totalWithdrawn) /
+          simulation.totalInvested
+        ).toFixed(2)
+      : "1.00";
+  const totalWealthGenerated = simulation.finalCorpus + simulation.totalWithdrawn;
+
+  const milestoneYears = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [1, 2, 3, 5, 7, 10, 15, 20, 25, 30]
+            .filter((y) => y <= totalTimelineYears)
+            .concat(totalTimelineYears)
+        )
+      ).sort((a, b) => a - b),
+    [totalTimelineYears]
+  );
+
+  const displayedSchedule = useMemo(() => {
+    if (simulation.yearlyBreakdown.length <= 10) {
+      return simulation.yearlyBreakdown;
+    }
+    return simulation.yearlyBreakdown.filter((r) => milestoneYears.includes(r.year));
+  }, [simulation.yearlyBreakdown, milestoneYears]);
+
   return (
     <div className="w-full space-y-8 animate-fadeIn">
       {/* Top Banner & Presets */}
@@ -404,18 +459,41 @@ export function PortfolioJourneyCalculator() {
             </p>
           </div>
 
-          {/* Quick Presets */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Presets:</span>
-            {PRESET_PORTFOLIOS.map((preset) => (
+          {/* Controls: Quick Presets & PDF Report Export */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Presets:</span>
+              {PRESET_PORTFOLIOS.map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => applyPreset(preset.id)}
+                  className="px-3 py-1.5 rounded-lg border border-emerald-200 bg-white hover:bg-emerald-50 text-xs font-bold text-emerald-900 shadow-2xs transition-all cursor-pointer"
+                >
+                  {preset.title}
+                </button>
+              ))}
+            </div>
+
+            {/* PDF Report Export Buttons */}
+            <div className="flex items-center gap-2">
               <button
-                key={preset.id}
-                onClick={() => applyPreset(preset.id)}
-                className="px-3 py-1.5 rounded-lg border border-emerald-200 bg-white hover:bg-emerald-50 text-xs font-bold text-emerald-900 shadow-2xs transition-all cursor-pointer"
+                type="button"
+                onClick={() => setShowPreview(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-200 bg-white text-gray-700 text-xs font-bold hover:bg-emerald-50 transition-colors shadow-2xs cursor-pointer"
               >
-                {preset.title}
+                <FileText size={15} className="text-emerald-700" />
+                <span className="hidden sm:inline">View in</span> PDF
               </button>
-            ))}
+              <button
+                type="button"
+                onClick={handleDownloadPDF}
+                disabled={isDownloading}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#fe9800] text-white text-xs font-bold hover:bg-[#e58900] transition-colors shadow-2xs disabled:opacity-70 cursor-pointer"
+              >
+                <Download size={15} />
+                <span>{isDownloading ? "Generating..." : "Download PDF"}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -902,6 +980,408 @@ export function PortfolioJourneyCalculator() {
           </div>
         </div>
       </div>
+
+      {/* MULTI-PAGE PDF PREVIEW MODAL */}
+      {showPreview && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4 print:p-0 print:bg-white print:relative print:block print:inset-auto"
+          onClick={() => setShowPreview(false)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-5xl w-full h-[95vh] sm:h-[88vh] overflow-hidden flex flex-col print:h-auto print:overflow-visible print:w-full print:max-w-none print:shadow-none print:rounded-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 sm:p-6 border-b print:hidden">
+              <div>
+                <h3 className="font-bold text-xl text-[#1a2332]">
+                  Multi-Phase Portfolio Journey Report Preview (2 Pages)
+                </h3>
+                <p className="text-xs text-gray-500">
+                  Page 1: Executive Summary & Fund Architecture • Page 2: Mathematical Engine, Lifecycle KPIs & Trajectory Schedule
+                </p>
+              </div>
+              <div className="flex gap-2 sm:gap-4 w-full sm:w-auto">
+                <button
+                  onClick={handleDownloadPDF}
+                  disabled={isDownloading}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-[#fe9800] text-white text-sm font-bold hover:bg-[#e58900] transition-colors shadow-md shadow-orange-500/20 disabled:opacity-70 cursor-pointer"
+                >
+                  <Download size={16} /> {isDownloading ? "Generating..." : "Save 2-Page PDF"}
+                </button>
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="w-10 sm:w-9 h-10 sm:h-9 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 rounded-full text-gray-500 font-bold border border-gray-200 sm:border-transparent cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable Preview Area for Both Pages */}
+            <div className="flex-1 overflow-auto bg-gray-100/80 p-4 sm:p-8 flex flex-col items-center gap-8 print:bg-white print:p-0">
+              {/* PAGE 1: EXECUTIVE SUMMARY */}
+              <div className="flex flex-col items-center">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 print:hidden">
+                  Page 1 of 2: Executive Summary & Fund Architecture
+                </span>
+                <div
+                  id="journey-pdf-report-page-1"
+                  className="w-[794px] min-w-[794px] h-[1123px] bg-white shadow-xl print:shadow-none relative overflow-hidden flex-shrink-0"
+                >
+                  <img
+                    src="/Printable.svg"
+                    alt="Template Header"
+                    className="w-full h-auto object-cover opacity-80 pointer-events-none absolute top-0 left-0"
+                  />
+
+                  <div className="relative z-10 w-full h-full pt-[220px] px-14 flex flex-col pb-20 justify-between">
+                    <div>
+                      {/* Title Header */}
+                      <div className="flex justify-between items-end border-b-2 border-gray-100 pb-4 mb-4">
+                        <div>
+                          <span className="text-xs font-bold tracking-widest text-[#fe9800] uppercase">
+                            Solid Wealth Financial Report
+                          </span>
+                          <h1 className="text-2xl font-black text-[#1a2332]">
+                            Multi-Phase Portfolio Journey & Cashflow Report
+                          </h1>
+                        </div>
+                        <span className="text-xs font-bold text-gray-400">Page 1 of 2</span>
+                      </div>
+
+                      {/* Horizon & Phase Status Banner */}
+                      <div className="bg-[#F0FDF4] border border-emerald-200 rounded-xl px-4 py-2.5 mb-5 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">
+                            Evaluation Horizon:
+                          </span>
+                          <span className="text-xs text-gray-800 font-bold">{totalTimelineYears} Years</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-gray-500 font-semibold">Configured Streams:</span>
+                          <span className="text-xs font-bold text-gray-800">{streams.length} Allocation Legs</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-white px-2.5 py-1 rounded-md border border-emerald-200">
+                          <span>Total Wealth Created:</span>
+                          <span className="text-emerald-700">₹{formatINR(totalWealthGenerated)} ({capitalMultiplier}x)</span>
+                        </div>
+                      </div>
+
+                      {/* 4 Executive Summary KPI Cards */}
+                      <div className="grid grid-cols-4 gap-3 mb-5">
+                        <div className="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-2xs">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Invested Outlay</p>
+                          <p className="text-base font-black text-[#1a2332] mt-0.5">₹{formatINR(simulation.totalInvested)}</p>
+                          <p className="text-[9px] text-gray-500 mt-0.5">Across all deposits</p>
+                        </div>
+
+                        <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-3 text-center shadow-2xs">
+                          <p className="text-[10px] font-bold text-rose-700 uppercase tracking-wider">Total SWP Withdrawn</p>
+                          <p className="text-base font-black text-rose-600 mt-0.5">₹{formatINR(simulation.totalWithdrawn)}</p>
+                          <p className="text-[9px] text-rose-700 mt-0.5">Monthly passive income</p>
+                        </div>
+
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-center shadow-2xs">
+                          <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">Net Compounding Gains</p>
+                          <p className="text-base font-black text-emerald-700 mt-0.5">+₹{formatINR(simulation.netGains)}</p>
+                          <p className="text-[9px] text-emerald-800 mt-0.5">
+                            +{((simulation.netGains / Math.max(simulation.totalInvested, 1)) * 100).toFixed(1)}% Gain on Capital
+                          </p>
+                        </div>
+
+                        <div className="rounded-xl border border-blue-200 bg-[#F0F6FF] p-3 text-center shadow-2xs">
+                          <p className="text-[10px] font-bold text-[#0B63E5] uppercase tracking-wider">Ending Portfolio Value</p>
+                          <p className="text-base font-black text-[#0B63E5] mt-0.5">₹{formatINR(simulation.finalCorpus)}</p>
+                          <p className="text-[9px] text-blue-700 mt-0.5">Terminal wealth remaining</p>
+                        </div>
+                      </div>
+
+                      {/* Stream Breakdown Table */}
+                      <div className="border border-gray-200 rounded-xl overflow-hidden mb-5 shadow-2xs">
+                        <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex justify-between items-center">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-gray-700">
+                            Configured Multi-Phase Streams & Capital Allocation
+                          </span>
+                          <span className="text-[10px] text-gray-500 font-medium">Over {totalTimelineYears} Year Timeline</span>
+                        </div>
+                        <table className="w-full text-xs text-left">
+                          <thead className="bg-gray-50/60 text-gray-500 font-bold border-b border-gray-100 text-[10px] uppercase">
+                            <tr>
+                              <th className="py-2.5 px-3">Stream / Fund Name</th>
+                              <th className="py-2.5 px-3">Leg Type</th>
+                              <th className="py-2.5 px-3 text-center">Active Timeline</th>
+                              <th className="py-2.5 px-3 text-right">Contribution / Cashflow</th>
+                              <th className="py-2.5 px-3 text-center">Expected CAGR</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 text-gray-800">
+                            {streams.map((s) => {
+                              const typeInfo = STREAM_TYPE_INFO[s.type];
+                              const Icon = typeInfo.icon;
+                              const endYear = s.startYear + s.durationYears - 1;
+                              let amountLabel = "";
+                              if (s.type === "sip") amountLabel = `₹${formatINR(s.monthlyAmount || 0)}/mo`;
+                              else if (s.type === "step_up_sip") amountLabel = `₹${formatINR(s.monthlyAmount || 0)}/mo (+${s.stepUpPercent || 0}%)`;
+                              else if (s.type === "lumpsum") amountLabel = `₹${formatINR(s.lumpsumAmount || 0)} (One-time)`;
+                              else if (s.type === "swp") amountLabel = `₹${formatINR(s.monthlyAmount || 0)}/mo (Outflow)`;
+
+                              return (
+                                <tr key={s.id} className="bg-white">
+                                  <td className="py-2.5 px-3">
+                                    <div className="flex items-center gap-2">
+                                      <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                                      <span className="font-bold text-[#1a2332]">{s.name}</span>
+                                    </div>
+                                  </td>
+                                  <td className="py-2.5 px-3">
+                                    <span className={cn("px-2 py-0.5 rounded text-[10px] font-bold border inline-flex items-center gap-1", typeInfo.badgeBg)}>
+                                      <Icon className="size-3" />
+                                      {typeInfo.label}
+                                    </span>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-center text-gray-700 font-semibold">
+                                    Year {s.startYear} - Year {endYear} ({s.durationYears} {s.durationYears === 1 ? "Yr" : "Yrs"})
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right font-bold text-gray-800">
+                                    {amountLabel}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-center font-bold text-emerald-700">
+                                    {s.expectedReturn}% p.a.
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Visual Lifecycle Progression / Phase Breakdown */}
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className="rounded-xl border border-blue-200 bg-[#F0F6FF]/70 p-3 shadow-2xs">
+                          <div className="flex justify-between items-center mb-1.5 pb-1 border-b border-blue-200/60">
+                            <span className="text-[10px] font-bold text-[#0B63E5] uppercase tracking-wider">
+                              Phase 1: Systematic Wealth Accumulation
+                            </span>
+                            <span className="text-[9px] font-bold text-blue-700 bg-white px-2 py-0.5 rounded border border-blue-200">
+                              Inflows & Capital Outlay
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs mb-1">
+                            <span className="text-gray-600 font-medium">Cumulative Capital Invested:</span>
+                            <span className="font-extrabold text-[#1a2332]">₹{formatINR(simulation.totalInvested)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs mb-1">
+                            <span className="text-gray-600 font-medium">Active Inflow Streams:</span>
+                            <span className="font-bold text-blue-700">{streams.filter((s) => s.type !== "swp").length} Funding Legs</span>
+                          </div>
+                          <p className="text-[9px] text-gray-500 mt-1">
+                            Disciplined capital is injected regularly or lump-sum, capturing compound returns before distribution.
+                          </p>
+                        </div>
+
+                        <div className="rounded-xl border border-emerald-200 bg-[#F0FDF4]/70 p-3 shadow-2xs">
+                          <div className="flex justify-between items-center mb-1.5 pb-1 border-b border-emerald-200/60">
+                            <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">
+                              Phase 2: Distribution & Wealth Preservation
+                            </span>
+                            <span className="text-[9px] font-bold text-emerald-700 bg-white px-2 py-0.5 rounded border border-emerald-200">
+                              Outflows & Terminal Corpus
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs mb-1">
+                            <span className="text-gray-600 font-medium">Cumulative SWP Pension Paid:</span>
+                            <span className="font-extrabold text-rose-600">₹{formatINR(simulation.totalWithdrawn)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs mb-1">
+                            <span className="text-gray-600 font-medium">Terminal Corpus Remaining:</span>
+                            <span className="font-extrabold text-emerald-700">₹{formatINR(simulation.finalCorpus)}</span>
+                          </div>
+                          <p className="text-[9px] text-gray-500 mt-1">
+                            Provides regular liquid cashflow while remaining assets continue generating geometric compound returns.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Executive Takeaway */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-[10px] text-gray-600 flex items-start gap-2">
+                      <span className="font-bold text-[#1a2332] uppercase shrink-0">Strategic Takeaway:</span>
+                      <span>
+                        Over the {totalTimelineYears}-year financial plan, investing ₹{formatINR(simulation.totalInvested)} generates ₹{formatINR(simulation.totalWithdrawn)} in cumulative passive income while preserving ₹{formatINR(simulation.finalCorpus)} in terminal capital (total wealth multiple of {capitalMultiplier}x). Transitioning from disciplined systematic accumulation to structured systematic withdrawal maximizes compounding while ensuring liquid cashflow.
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* PAGE 2: ALGORITHM & TRAJECTORY SCHEDULE */}
+              <div className="flex flex-col items-center">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 print:hidden">
+                  Page 2 of 2: Algorithm, Calculation Details & Schedule
+                </span>
+                <div
+                  id="journey-pdf-report-page-2"
+                  className="w-[794px] min-w-[794px] h-[1123px] bg-white shadow-xl print:shadow-none relative overflow-hidden flex-shrink-0"
+                >
+                  <img
+                    src="/Printable.svg"
+                    alt="Template Background"
+                    className="w-full h-auto object-cover opacity-80 absolute top-0 left-0 pointer-events-none"
+                  />
+
+                  <div className="relative z-10 w-full h-full pt-[220px] px-14 flex flex-col pb-20 justify-between">
+                    <div>
+                      {/* Header */}
+                      <div className="flex justify-between items-end border-b-2 border-gray-100 pb-3 mb-3">
+                        <div>
+                          <span className="text-[10px] font-bold tracking-widest text-[#fe9800] uppercase">
+                            Calculation Methodology & Progression Details
+                          </span>
+                          <h2 className="text-2xl font-black text-[#1a2332]">Portfolio Dynamics & Cashflow Progression Schedule</h2>
+                        </div>
+                        <span className="text-xs font-bold text-gray-400">Page 2 of 2</span>
+                      </div>
+
+                      {/* ALGORITHM DEFINITIONS & FORMULAS CARD */}
+                      <div className="bg-[#FFFDF4] border border-orange-100 rounded-xl p-3.5 mb-3 shadow-2xs">
+                        <div className="flex justify-between items-center mb-2 pb-1.5 border-b border-orange-100/70">
+                          <span className="text-[11px] font-bold text-[#1a2332] uppercase tracking-wider">
+                            Mathematical Formulation & Dynamic Compounding Engine
+                          </span>
+                          <span className="text-[10px] font-mono font-bold text-[#fe9800] bg-white px-2 py-0.5 rounded border border-orange-200">
+                            Discrete Multi-Stream Dynamic Cashflow Engine
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-[10px] text-gray-700 mb-2">
+                          <div className="bg-white/80 p-2 rounded border border-orange-100">
+                            <span className="font-bold text-[#0B63E5] block mb-0.5">Accumulation Phase (Inflows):</span>
+                            <code className="font-mono text-[9.5px] text-gray-800">
+                              Balance_m = Balance_(m-1) × (1 + r/12) + Inflows_m
+                            </code>
+                            <p className="text-[8.5px] text-gray-500 mt-1">
+                              SIPs deposit monthly; Step-Up deposits scale annually by rate g% (P_y = P_0 × (1+g)^(y-1)); lump sums inject at year start.
+                            </p>
+                          </div>
+
+                          <div className="bg-white/80 p-2 rounded border border-orange-100">
+                            <span className="font-bold text-rose-600 block mb-0.5">Distribution Phase (SWP Outflows):</span>
+                            <code className="font-mono text-[9.5px] text-gray-800">
+                              Balance_m = Balance_(m-1) × (1 + r/12) - Outflows_m
+                            </code>
+                            <p className="text-[8.5px] text-gray-500 mt-1">
+                              Liquid cashflow is withdrawn at month start; remaining balance continues compounding. Solvency is guarded by min(SWP, Balance).
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="text-[9.5px] text-gray-600 space-y-0.5">
+                          <span className="font-bold text-gray-700 uppercase tracking-wider text-[9px] block">
+                            Calculation Mechanics:
+                          </span>
+                          <p>1. Geometric compounding calculated month-by-month at weighted average annualized expected return.</p>
+                          <p>2. Cash flows execute at the start of each month (annuity due) maximizing continuous market compounding.</p>
+                          <p>3. Solvency guard preserves non-negative capital balance across all simulated durations.</p>
+                        </div>
+                      </div>
+
+                      {/* 4 Analytical KPI Cards */}
+                      <div className="grid grid-cols-4 gap-2 mb-3">
+                        <div className="border border-gray-200 bg-gray-50 rounded-xl p-2 text-center">
+                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Capital Productivity</p>
+                          <p className="text-sm font-black text-[#1a2332]">{capitalMultiplier}x Outlay</p>
+                          <p className="text-[8.5px] text-gray-500 mt-0.5">Payout + terminal wealth</p>
+                        </div>
+
+                        <div className="border border-emerald-200 bg-[#F0FDF4] rounded-xl p-2 text-center">
+                          <p className="text-[9px] font-bold text-emerald-800 uppercase tracking-wider mb-0.5">Capital Preservation</p>
+                          <p className="text-sm font-black text-emerald-700">
+                            {simulation.finalCorpus >= simulation.totalInvested ? "Intact & Growing" : "Amortizing Balance"}
+                          </p>
+                          <p className="text-[8.5px] text-gray-500 mt-0.5">Corpus vs invested capital</p>
+                        </div>
+
+                        <div className="border border-rose-200 bg-rose-50/60 rounded-xl p-2 text-center">
+                          <p className="text-[9px] font-bold text-rose-700 uppercase tracking-wider mb-0.5">Passive Extraction</p>
+                          <p className="text-sm font-black text-rose-600">₹{formatINR(simulation.totalWithdrawn)}</p>
+                          <p className="text-[8.5px] text-gray-500 mt-0.5">SWP liquidity realized</p>
+                        </div>
+
+                        <div className="border border-gray-200 bg-gray-50 rounded-xl p-2 text-center">
+                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Real Value (6% Infl.)</p>
+                          <p className="text-sm font-black text-[#0B63E5]">
+                            ₹{formatINR(Math.round(simulation.finalCorpus / Math.pow(1.06, totalTimelineYears)))}
+                          </p>
+                          <p className="text-[8.5px] text-gray-500 mt-0.5">Inflation-adjusted corpus</p>
+                        </div>
+                      </div>
+
+                      {/* Cashflow Progression Schedule Table */}
+                      <div className="border border-gray-200 rounded-xl overflow-hidden mb-3">
+                        <div className="bg-gray-50 px-3.5 py-1.5 border-b border-gray-200 flex justify-between items-center">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-700">
+                            Year-by-Year Cashflow Progression Schedule
+                          </span>
+                          <span className="text-[9.5px] text-gray-500">All Figures in INR (₹)</span>
+                        </div>
+                        <table className="w-full text-[10.5px] text-left">
+                          <thead className="bg-gray-50/70 text-gray-500 font-bold border-b border-gray-100 text-[9.5px] uppercase">
+                            <tr>
+                              <th className="py-2 px-3">Timeline</th>
+                              <th className="py-2 px-3 text-right">Start Value</th>
+                              <th className="py-2 px-3 text-right">Inflows</th>
+                              <th className="py-2 px-3 text-right">SWP Outflow</th>
+                              <th className="py-2 px-3 text-right">Gains</th>
+                              <th className="py-2 px-3 text-right font-black">End Balance</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 text-gray-800">
+                            {displayedSchedule.map((row) => (
+                              <tr
+                                key={row.year}
+                                className={row.year === totalTimelineYears ? "bg-amber-50/50 font-bold" : "hover:bg-gray-50/50"}
+                              >
+                                <td className="py-2 px-3 font-semibold text-gray-800">{row.label}</td>
+                                <td className="py-2 px-3 text-right text-gray-600">₹{formatINR(row.startBalance)}</td>
+                                <td className="py-2 px-3 text-right">
+                                  {row.inflows > 0 ? (
+                                    <span className="text-blue-600 font-semibold">+₹{formatINR(row.inflows)}</span>
+                                  ) : (
+                                    <span className="text-gray-400">-</span>
+                                  )}
+                                </td>
+                                <td className="py-2 px-3 text-right">
+                                  {row.outflows > 0 ? (
+                                    <span className="text-rose-600 font-semibold">-₹{formatINR(row.outflows)}</span>
+                                  ) : (
+                                    <span className="text-gray-400">-</span>
+                                  )}
+                                </td>
+                                <td className="py-2 px-3 text-right font-bold text-emerald-600">
+                                  +₹{formatINR(row.gains)}
+                                </td>
+                                <td className="py-2 px-3 text-right font-extrabold text-[#1a2332]">
+                                  ₹{formatINR(row.endBalance)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Disclaimer Note */}
+                    <div className="border-t border-gray-200 pt-2 text-[8.5px] text-gray-400 text-center">
+                      Mutual Fund investments are subject to market risks. Please read all scheme-related documents carefully before investing. Past performance is not indicative of future returns. Solid Wealth Services.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -144,12 +144,57 @@ async function fetchFeed(spec: FeedSpec): Promise<NewsItem[]> {
     }
 }
 
-// Different hosts, so these go out together; one dead feed costs nothing.
+const NEWS_API_KEY = process.env.NEWS_API_KEY || "b374c8285a9e4eb29b16f642ce34fa9f";
+
+async function fetchNewsApiItems(): Promise<NewsItem[]> {
+    try {
+        const res = await fetch(
+            `https://newsapi.org/v2/everything?q=%28%22mutual+funds%22+OR+%22corporate+bonds%22+OR+%22nifty%22+OR+%22sensex%22+OR+%22SIP+investment%22%29&apiKey=${NEWS_API_KEY}&language=en&sortBy=publishedAt&pageSize=15`,
+            {
+                headers: { "User-Agent": "SolidWealthBlog/1.0" },
+                next: { revalidate: 3600 },
+            }
+        );
+        if (!res.ok) return [];
+        const data = await res.json();
+        if (data.status !== "ok" || !Array.isArray(data.articles)) return [];
+
+        return data.articles
+            .filter((art: any) => art.title && art.title !== "[Removed]")
+            .map((art: any) => {
+                let cat: BlogCategory = "news";
+                const lower = (art.title + " " + (art.description || "")).toLowerCase();
+                if (lower.includes("bond") || lower.includes("debt") || lower.includes("yield")) cat = "funds";
+                else if (lower.includes("mutual fund") || lower.includes("sip")) cat = "funds";
+                else if (lower.includes("gold") || lower.includes("silver") || lower.includes("crude")) cat = "commodities";
+                else if (lower.includes("nri") || lower.includes("fema") || lower.includes("tax")) cat = "nri_naval";
+
+                const cleanTitle = art.title.split(" - ")[0].trim();
+                return {
+                    title: cleanTitle,
+                    link: art.url,
+                    summary: (art.description || art.content || "").trim(),
+                    publishedAt: art.publishedAt || null,
+                    source: art.source?.name || "NewsAPI Wire",
+                    category: cat,
+                    tag: tagFor(cleanTitle, DEFAULT_TAGS[cat]),
+                };
+            });
+    } catch (err) {
+        console.error("fetchNewsApiItems failed:", err);
+        return [];
+    }
+}
+
+// Combines NewsAPI /v2/everything and Indian financial RSS feeds
 export async function fetchNewsItems(): Promise<NewsItem[]> {
-    const perFeed = await Promise.all(FEEDS.map(fetchFeed));
+    const [perFeed, newsApiItems] = await Promise.all([
+        Promise.all(FEEDS.map(fetchFeed)),
+        fetchNewsApiItems(),
+    ]);
     const seen = new Set<string>();
     const items: NewsItem[] = [];
-    for (const item of perFeed.flat()) {
+    for (const item of [...newsApiItems, ...perFeed.flat()]) {
         const key = item.title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
         if (seen.has(key)) continue;
         seen.add(key);
