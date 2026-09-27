@@ -228,36 +228,101 @@ function nameTokens(name: string) {
   return new Set(
     name
       .toLowerCase()
-      .replace(/[’']/g, "")
+      .replace(/[’'"]/g, "")
       .split(/[^a-z0-9]+/)
       .flatMap((token) => (ABBREVIATIONS[token] ?? token).split(" "))
-      .filter(Boolean)
+      .filter((t) => t.length > 1 && !["fund", "regular", "growth", "reg", "gr", "plan", "option"].includes(t))
   );
 }
 
-// The uploaded sheet abbreviates names ("ABSL Bal Bhavishya Yojna Reg Gr"), so a
-// scheme is identified by its NAV: the AMFI scheme in the same category whose
-// NAV, to two decimals, equals the sheet's NAV on a date just before the upload.
-// Name overlap only breaks ties; if a tie remains nothing is shown.
-function matchScheme(vendorName: string, vendorNav: number, uploadedOn: string, candidates: SchemeHistory[]) {
-  const target = Math.round(vendorNav * 100);
-  const windowStart = addDays(uploadedOn, -MATCH_WINDOW_DAYS);
-  let hits = candidates.filter(({ history }) =>
-    history.some(
-      (point) => point.date >= windowStart && point.date <= uploadedOn && Math.round(point.nav * 100) === target
-    )
-  );
-  if (hits.length > 1) {
-    const wanted = nameTokens(vendorName);
-    const scored = hits.map((hit) => ({
-      hit,
-      score: [...nameTokens(hit.scheme.name)].filter((token) => wanted.has(token)).length,
-    }));
-    const best = Math.max(...scored.map((entry) => entry.score));
-    hits = scored.filter((entry) => entry.score === best).map((entry) => entry.hit);
+// Fallback search directly on api.mfapi.in if AMFI feed does not contain the scheme
+async function searchMfApi(name: string): Promise<AmfiScheme | null> {
+  const words = [...nameTokens(name)];
+  const queries = [
+    words.length >= 2 ? words.slice(-2).join(" ") : null,
+    words.slice(0, 3).join(" "),
+    words.join(" "),
+  ].filter(Boolean) as string[];
+
+  for (const q of queries) {
+    try {
+      const res = await fetch(`${MFAPI_URL}/search?q=${encodeURIComponent(q)}`);
+      if (!res.ok) continue;
+      const items = (await res.json()) as { schemeCode: number; schemeName: string }[];
+      if (items && items.length > 0) {
+        const regGr =
+          items.find((r) => /regular/i.test(r.schemeName) && /growth/i.test(r.schemeName)) ||
+          items.find((r) => /growth/i.test(r.schemeName) && !/direct/i.test(r.schemeName)) ||
+          items[0];
+        if (regGr) {
+          const detRes = await fetch(`${MFAPI_URL}/${regGr.schemeCode}`);
+          if (!detRes.ok) continue;
+          const det = (await detRes.json()) as {
+            meta?: {
+              scheme_name?: string;
+              isin_growth?: string;
+              fund_house?: string;
+              scheme_type?: string;
+              scheme_category?: string;
+            };
+          };
+          return {
+            code: String(regGr.schemeCode),
+            name: det.meta?.scheme_name || regGr.schemeName,
+            isin: det.meta?.isin_growth || null,
+            fundHouse: det.meta?.fund_house || "",
+            category: det.meta?.scheme_type || "",
+            subcategory: det.meta?.scheme_category || "",
+          };
+        }
+      }
+    } catch {
+      continue;
+    }
   }
-  if (hits.length === 1) return { match: hits[0] };
-  return { reason: hits.length > 1 ? ("ambiguous" as const) : ("no-match" as const) };
+  return null;
+}
+
+// Matches scheme by exact NAV if available, or falls back to name token overlap
+function matchScheme(
+  vendorName: string,
+  vendorNav: number | undefined,
+  uploadedOn: string | undefined,
+  candidates: SchemeHistory[]
+) {
+  if (vendorNav && Number.isFinite(vendorNav) && vendorNav > 0 && uploadedOn) {
+    const target = Math.round(vendorNav * 100);
+    const windowStart = addDays(uploadedOn, -MATCH_WINDOW_DAYS);
+    let hits = candidates.filter(({ history }) =>
+      history.some(
+        (point) => point.date >= windowStart && point.date <= uploadedOn && Math.round(point.nav * 100) === target
+      )
+    );
+    if (hits.length > 1) {
+      const wanted = nameTokens(vendorName);
+      const scored = hits.map((hit) => ({
+        hit,
+        score: [...nameTokens(hit.scheme.name + " " + hit.scheme.fundHouse)].filter((token) => wanted.has(token)).length,
+      }));
+      const best = Math.max(...scored.map((entry) => entry.score));
+      hits = scored.filter((entry) => entry.score === best).map((entry) => entry.hit);
+    }
+    if (hits.length === 1) return { match: hits[0] };
+  }
+
+  // Fallback to token matching
+  const wanted = nameTokens(vendorName);
+  const scored = candidates.map((hit) => {
+    const sTokens = nameTokens(hit.scheme.name + " " + hit.scheme.fundHouse);
+    const score = [...wanted].filter((token) => sTokens.has(token)).length;
+    return { hit, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  if (scored.length > 0 && scored[0].score >= 2) {
+    return { match: scored[0].hit };
+  }
+  return { reason: "no-match" as const };
 }
 
 // ---------- calculations ----------
@@ -334,30 +399,85 @@ function volatility3y(history: NavPoint[], asOf: string): number | null {
 }
 
 export async function getFundAnalytics(input: {
-  category: string;
+  category?: string;
   scheme: string;
-  nav: number;
-  uploadedOn: string;
+  nav?: number;
+  uploadedOn?: string;
+  code?: string;
 }): Promise<FundAnalytics> {
   const res = await fetch(AMFI_NAV_URL, { next: { revalidate: REVALIDATE_SECONDS } });
   if (!res.ok) throw new Error(`AMFI NAV file request failed with ${res.status}`);
-  const key = categoryKey(input.category);
-  const inCategory = parseAmfiFeed(await res.text()).filter((scheme) => categoryKey(scheme.subcategory) === key);
-  if (inCategory.length === 0) return { matched: false, reason: "category-not-found", categorySchemes: 0 };
+  const allSchemes = parseAmfiFeed(await res.text());
+
+  // 1. Direct code lookup if code is provided
+  let matchedAmfiScheme: AmfiScheme | null = input.code
+    ? allSchemes.find((s) => s.code === input.code) ?? null
+    : null;
+
+  // 2. Identify candidate schemes from AMFI feed
+  const key = input.category ? categoryKey(input.category) : "";
+  const inCategory = key ? allSchemes.filter((scheme) => categoryKey(scheme.subcategory) === key) : [];
+
+  if (!matchedAmfiScheme) {
+    const pool = inCategory.length > 0 ? inCategory : allSchemes;
+    const wanted = nameTokens(input.scheme);
+    const scored = pool.map((s) => {
+      const sTokens = nameTokens(s.name + " " + s.fundHouse);
+      const score = [...wanted].filter((t) => sTokens.has(t)).length;
+      return { scheme: s, score };
+    });
+    scored.sort((a, b) => b.score - a.score);
+
+    if (scored.length > 0 && scored[0].score >= 2) {
+      matchedAmfiScheme = scored[0].scheme;
+    } else if (inCategory.length > 0) {
+      // Try searching all schemes if category was too restrictive
+      const scoredAll = allSchemes.map((s) => {
+        const sTokens = nameTokens(s.name + " " + s.fundHouse);
+        const score = [...wanted].filter((t) => sTokens.has(t)).length;
+        return { scheme: s, score };
+      });
+      scoredAll.sort((a, b) => b.score - a.score);
+      if (scoredAll.length > 0 && scoredAll[0].score >= 2) {
+        matchedAmfiScheme = scoredAll[0].scheme;
+      }
+    }
+  }
+
+  // 3. Fallback to mfapi search if still not found
+  if (!matchedAmfiScheme) {
+    matchedAmfiScheme = await searchMfApi(input.scheme);
+  }
+
+  if (!matchedAmfiScheme) {
+    return { matched: false, reason: "no-match", categorySchemes: 0 };
+  }
+
+  // Gather schemes in the matched scheme's subcategory for category averages and ranks
+  const catKey = categoryKey(matchedAmfiScheme.subcategory || matchedAmfiScheme.category || input.category || "");
+  const categorySchemes = catKey
+    ? allSchemes.filter((s) => categoryKey(s.subcategory) === catKey || categoryKey(s.category) === catKey)
+    : [matchedAmfiScheme];
+
+  // Prioritize fetching the matched scheme first, plus up to 25 other category schemes
+  const schemesToFetch = [
+    matchedAmfiScheme,
+    ...categorySchemes.filter((s) => s.code !== matchedAmfiScheme!.code).slice(0, 25),
+  ];
 
   const histories = (
-    await mapWithConcurrency(inCategory, FETCH_CONCURRENCY, async (scheme) => ({
+    await mapWithConcurrency(schemesToFetch, FETCH_CONCURRENCY, async (scheme) => ({
       scheme,
       history: await fetchHistory(scheme.code),
     }))
   ).filter((entry): entry is SchemeHistory => entry.history !== null && entry.history.length > 1);
 
-  const result = matchScheme(input.scheme, input.nav, input.uploadedOn, histories);
-  if (!("match" in result) || !result.match) {
-    return { matched: false, reason: result.reason ?? "no-match", categorySchemes: histories.length };
+  const matchedHistory = histories.find((h) => h.scheme.code === matchedAmfiScheme!.code);
+  if (!matchedHistory) {
+    return { matched: false, reason: "no-match", categorySchemes: 0 };
   }
 
-  const { scheme, history } = result.match;
+  const { scheme, history } = matchedHistory;
   const latest = history[history.length - 1];
   const previous = history.length > 1 ? history[history.length - 2] : null;
   const asOf = latest.date;

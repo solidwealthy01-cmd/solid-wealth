@@ -6,15 +6,19 @@ import { getFundAnalytics } from "@/lib/fund-analytics";
 // used to find the matching AMFI scheme.
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
-    const category = searchParams.get("category")?.trim() ?? "";
-    const scheme = searchParams.get("scheme")?.trim() ?? "";
-    const nav = Number(searchParams.get("nav"));
-    const uploadedOn = searchParams.get("uploadedOn") ?? "";
-    if (!category || !scheme || !Number.isFinite(nav) || nav <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(uploadedOn)) {
-        return NextResponse.json({ error: "category, scheme, nav and uploadedOn (YYYY-MM-DD) are required" }, { status: 400 });
+    const category = searchParams.get("category")?.trim() || undefined;
+    const scheme = searchParams.get("scheme")?.trim() || "";
+    const code = searchParams.get("code")?.trim() || undefined;
+    const navParam = searchParams.get("nav");
+    const navNum = navParam ? Number(navParam) : undefined;
+    const nav = navNum && Number.isFinite(navNum) && navNum > 0 ? navNum : undefined;
+    const uploadedOn = searchParams.get("uploadedOn") || undefined;
+
+    if (!scheme && !code) {
+        return NextResponse.json({ error: "scheme or code is required" }, { status: 400 });
     }
     try {
-        return NextResponse.json(await getFundAnalytics({ category, scheme, nav, uploadedOn }));
+        return NextResponse.json(await getFundAnalytics({ category, scheme, nav, uploadedOn, code }));
     }
     catch (error) {
         console.error("Fund analytics failed:", error);

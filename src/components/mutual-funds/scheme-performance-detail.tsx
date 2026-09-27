@@ -95,17 +95,43 @@ export function SchemePerformanceDetail({ category, scheme, period }: SchemePerf
     return () => controller.abort();
   }, [category, period, scheme, reloadKey]);
 
-  const fund = rows.find((row) => row.scheme_name === scheme);
-  const fundNav = fund?.nav ?? null;
-  const uploadedOn = fund?.created_at.slice(0, 10) ?? null;
+  const backendFund = rows.find((row) => row.scheme_name === scheme);
+  const fundNav = backendFund?.nav ?? null;
+  const uploadedOn = backendFund?.created_at ? backendFund.created_at.slice(0, 10) : null;
+
+  const fund: FundPerformance | null =
+    backendFund ||
+    (analyticsStatus === "ready" && analytics?.matched
+      ? {
+          id: 0,
+          category: analytics.scheme.category || category,
+          scheme_name: scheme,
+          nav: String(analytics.nav.value),
+          launch_date: analytics.history.firstDate,
+          aum_crore: null,
+          ber_percent: null,
+          ter_percent: null,
+          rating: null,
+          mean: null,
+          sharpe_ratio: null,
+          alpha: null,
+          beta: null,
+          std_deviation: analytics.volatility3y != null ? String(analytics.volatility3y.toFixed(2)) : null,
+          fund_manager: null,
+          created_at: analytics.nav.date,
+        }
+      : null);
 
   // NAV history, category comparison and SIP figures come from our own route
   // handler, which links the uploaded row to its AMFI scheme.
   useEffect(() => {
-    if (!fundNav || !uploadedOn) return;
+    if (!scheme) return;
     const controller = new AbortController();
     const load = async () => {
-      const params = new URLSearchParams({ category, scheme, nav: fundNav, uploadedOn });
+      const params = new URLSearchParams({ scheme });
+      if (category) params.set("category", category);
+      if (fundNav && Number(fundNav) > 0) params.set("nav", fundNav);
+      if (uploadedOn) params.set("uploadedOn", uploadedOn);
       try {
         const res = await fetch(`/api/fund-analytics?${params}`, { signal: controller.signal });
         if (!res.ok) throw new Error(`Fund analytics request failed with ${res.status}`);
@@ -155,6 +181,10 @@ export function SchemePerformanceDetail({ category, scheme, period }: SchemePerf
   );
 
   const linked = analyticsStatus === "ready" && analytics?.matched ? analytics : null;
+  const isReady = (status === "ready" && Boolean(fund)) || (analyticsStatus === "ready" && Boolean(analytics?.matched) && Boolean(fund));
+  const isLoading = status === "loading" && analyticsStatus === "loading";
+  const isNotFound = !isReady && !isLoading && (status === "not-found" || status === "error") && analyticsStatus === "ready" && !analytics?.matched;
+  const isError = !isReady && !isLoading && status === "error" && analyticsStatus === "error";
 
   return (
     <div className="w-full space-y-8">
@@ -170,9 +200,9 @@ export function SchemePerformanceDetail({ category, scheme, period }: SchemePerf
         <span className="text-gray-900 font-bold">Fund Card</span>
       </nav>
 
-      {status === "loading" && messageBox("Loading scheme details...")}
+      {isLoading && messageBox("Loading scheme details...")}
 
-      {status === "error" &&
+      {isError &&
         messageBox(
           <span>
             Couldn&apos;t load this scheme.{" "}
@@ -186,17 +216,17 @@ export function SchemePerformanceDetail({ category, scheme, period }: SchemePerf
           </span>
         )}
 
-      {status === "not-found" &&
+      {isNotFound &&
         messageBox(
           <span>
-            {hasParams ? "This scheme isn't in the latest uploaded data." : "No scheme selected."}{" "}
+            {hasParams ? "This scheme isn't in the latest uploaded data or AMFI registry." : "No scheme selected."}{" "}
             <Link href="/mutual-funds" className="font-bold text-[#0B63E5] hover:underline">
               Browse trailing returns
             </Link>
           </span>
         )}
 
-      {status === "ready" && fund && (
+      {isReady && fund && (
         <>
           <div className="text-center space-y-2">
             <span className="inline-block rounded-full bg-[#FFEFC2] px-4 py-1 text-xs font-bold text-[#b86e00]">
@@ -244,16 +274,25 @@ export function SchemePerformanceDetail({ category, scheme, period }: SchemePerf
                     </p>
                   )}
                 </>
+              ) : fund.nav ? (
+                <>
+                  <p className="text-xs font-semibold text-gray-500">
+                    NAV {fund.created_at ? `(as per upload, ${formatDate(fund.created_at)})` : ""}
+                  </p>
+                  <p className="mt-1 text-3xl font-black text-[#1a2332]">{withRupee(formatFixed(fund.nav))}</p>
+                </>
               ) : (
                 <>
-                  <p className="text-xs font-semibold text-gray-500">NAV (as per upload, {formatDate(fund.created_at)})</p>
-                  <p className="mt-1 text-3xl font-black text-[#1a2332]">{withRupee(formatFixed(fund.nav))}</p>
+                  <p className="text-xs font-semibold text-gray-500">NAV</p>
+                  <p className="mt-1 text-3xl font-black text-gray-300">—</p>
                 </>
               )}
             </div>
 
             <div className="lg:col-span-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-xs flex flex-col items-center justify-center text-center">
-              <p className="text-xs font-semibold text-gray-500">AUM (as per upload, {formatDate(fund.created_at)})</p>
+              <p className="text-xs font-semibold text-gray-500">
+                AUM {fund.created_at ? `(as per upload, ${formatDate(fund.created_at)})` : ""}
+              </p>
               <p className="mt-1 text-3xl font-black text-[#1a2332]">
                 {fund.aum_crore === null ? "-" : `${withRupee(formatAum(fund.aum_crore))} Cr`}
               </p>
@@ -266,10 +305,10 @@ export function SchemePerformanceDetail({ category, scheme, period }: SchemePerf
               value={linked?.history.cagrSinceFirstNav != null ? `${linked.history.cagrSinceFirstNav.toFixed(2)}%` : "-"}
             />
             <StripItem label="NAV history from" value={linked ? formatDate(linked.history.firstDate) : "-"} />
-            <StripItem label="Launch Date" value={formatDate(fund.launch_date)} />
+            <StripItem label="Launch Date" value={formatDate(fund.launch_date || linked?.history.firstDate)} />
             <StripItem
               label="Expense Ratio"
-              value={`BER ${formatFixed(fund.ber_percent)}% | TER ${formatFixed(fund.ter_percent)}%`}
+              value={fund.ber_percent || fund.ter_percent ? `BER ${formatFixed(fund.ber_percent)}% | TER ${formatFixed(fund.ter_percent)}%` : "-"}
             />
             <StripItem
               label="Volatility (3Y, annualised)"
