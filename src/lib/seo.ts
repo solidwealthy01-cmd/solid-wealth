@@ -9,7 +9,13 @@ import type { Metadata } from "next";
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.solidwealthindia.com").replace(/\/$/, "");
 export const SITE_NAME = "Solid Wealth";
 export const SITE_TAGLINE = "Reimagine money, Simple solutions";
-export const DEFAULT_OG_IMAGE = "/poster.png";
+// Set NEXT_PUBLIC_TWITTER_HANDLE (e.g. "@solidwealth") to have X attribute
+// shared cards to the account. Left out of the tags entirely when unset, since
+// pointing at a handle that is not yours is worse than pointing at none.
+const TWITTER_HANDLE = process.env.NEXT_PUBLIC_TWITTER_HANDLE;
+// Social cards are generated per route by the opengraph-image.tsx files, which
+// Next wires into og:image and twitter:image automatically. Nothing here sets an
+// image explicitly — doing so would override those generated cards.
 
 export function absoluteUrl(path: string): string {
     return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
@@ -20,7 +26,6 @@ interface PageSeo {
     description: string;
     path: string;
     keywords?: string[];
-    image?: string;
     type?: "website" | "article";
     publishedTime?: string;
 }
@@ -28,9 +33,8 @@ interface PageSeo {
 // Every page gets a canonical and a matching Open Graph block. Without the
 // canonical, the calculator routes below all look like near-duplicates of each
 // other to a crawler and only one of them gets indexed.
-export function pageMetadata({ title, description, path, keywords, image, type = "website", publishedTime }: PageSeo): Metadata {
+export function pageMetadata({ title, description, path, keywords, type = "website", publishedTime }: PageSeo): Metadata {
     const url = absoluteUrl(path);
-    const ogImage = absoluteUrl(image ?? DEFAULT_OG_IMAGE);
     return {
         // `absolute` opts out of the root layout's "%s | Solid Wealth" template.
         // Each title below is already written to fit the ~60 characters Google
@@ -46,14 +50,13 @@ export function pageMetadata({ title, description, path, keywords, image, type =
             siteName: SITE_NAME,
             type,
             locale: "en_IN",
-            images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
             ...(publishedTime ? { publishedTime } : {}),
         },
         twitter: {
             card: "summary_large_image",
             title,
             description,
-            images: [ogImage],
+            ...(TWITTER_HANDLE ? { site: TWITTER_HANDLE, creator: TWITTER_HANDLE } : {}),
         },
     };
 }

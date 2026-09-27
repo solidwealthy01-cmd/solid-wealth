@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ShareLinks } from "@/components/seo/share-links";
 import { CALCULATORS, CalculatorSeo } from "@/lib/calculators-meta";
 
 // Server-rendered copy that sits under the interactive tool. The calculator
@@ -9,6 +10,10 @@ export function CalculatorSeoContent({ calculator }: { calculator: CalculatorSeo
     return (
         <section className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8 pb-4">
             <div className="rounded-3xl border border-gray-200 bg-white p-6 sm:p-8 lg:p-10">
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 pb-6">
+                    <ShareLinks title={`${calculator.name} — Solid Wealth`} />
+                </div>
+
                 <h2 className="text-2xl font-black text-[#1a2332]">
                     About the {calculator.name}
                 </h2>

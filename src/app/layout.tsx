@@ -5,7 +5,7 @@ import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
 import { ChatbotFloat } from "@/components/ui/chatbot-float";
 import { JsonLd } from "@/components/seo/json-ld";
-import { DEFAULT_OG_IMAGE, SITE_NAME, SITE_URL, organizationJsonLd, webSiteJsonLd } from "@/lib/seo";
+import { SITE_NAME, SITE_URL, organizationJsonLd, webSiteJsonLd } from "@/lib/seo";
 import "@/styles/globals.css";
 const sora = Sora({
     subsets: ["latin"],
@@ -48,13 +48,11 @@ export const metadata: Metadata = {
         url: SITE_URL,
         title: "Solid Wealth | Reimagine money, Simple solutions",
         description: "Mutual fund research, free financial calculators and advisory for Indian investors.",
-        images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: SITE_NAME }],
     },
     twitter: {
         card: "summary_large_image",
         title: "Solid Wealth | Reimagine money, Simple solutions",
         description: "Mutual fund research, free financial calculators and advisory for Indian investors.",
-        images: [DEFAULT_OG_IMAGE],
     },
     robots: {
         index: true,

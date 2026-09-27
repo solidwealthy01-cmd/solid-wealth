@@ -33,7 +33,6 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
         description: truncateForSearch(article.summary),
         path: `/blog/${article.id}`,
         keywords: article.tags,
-        image: article.image.startsWith("http") ? undefined : article.image,
         type: "article",
         publishedTime: article.date,
     });
