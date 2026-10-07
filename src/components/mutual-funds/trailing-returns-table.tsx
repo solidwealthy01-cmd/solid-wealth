@@ -19,7 +19,6 @@ type SortKey =
   | "scheme_name"
   | "launch_date"
   | "aum_crore"
-  | "ber_percent"
   | "ter_percent"
   | "rating"
   | "return_1yr"
@@ -197,7 +196,6 @@ export function TrailingReturnsTable() {
       "Scheme Name",
       "Launch Date",
       "AUM (Crore)",
-      "BER (%)",
       "TER (%)",
       "Rating",
       "1 Yr Rtn (%)",
@@ -219,7 +217,6 @@ export function TrailingReturnsTable() {
         fund.scheme_name,
         formatDate(fund.launch_date),
         fund.aum_crore,
-        fund.ber_percent,
         fund.ter_percent,
         fund.rating,
         fund.return_1yr,
@@ -475,7 +472,7 @@ export function TrailingReturnsTable() {
           <thead>
             {/* Top Tier Header */}
             <tr className="bg-[#FFF8EA] text-[#C2671A] font-bold text-[11px] border-b border-[#f3e5d0]">
-              <th colSpan={10} className="px-3 py-2 border-r border-[#faeedd]" />
+              <th colSpan={9} className="px-3 py-2 border-r border-[#faeedd]" />
               <th
                 colSpan={5}
                 className="px-3 py-2 text-center border-l border-t border-r border-[#faeedd] bg-[#FFF3DC] text-[#B85C0A] tracking-wider uppercase text-[11px] font-extrabold"
@@ -513,16 +510,6 @@ export function TrailingReturnsTable() {
                 <div className="flex items-center justify-end gap-1">
                   <span>AUM (Crore)</span>
                   <SortIcon active={sortKey === "aum_crore"} dir={sortDir} />
-                </div>
-              </th>
-
-              <th
-                onClick={() => toggleSort("ber_percent")}
-                className="px-2 py-3 text-right cursor-pointer hover:bg-orange-100/50 whitespace-nowrap"
-              >
-                <div className="flex items-center justify-end gap-1">
-                  <span>BER (%)</span>
-                  <SortIcon active={sortKey === "ber_percent"} dir={sortDir} />
                 </div>
               </th>
 
@@ -642,7 +629,7 @@ export function TrailingReturnsTable() {
           <tbody className="divide-y divide-gray-100">
             {tableMessage ? (
               <tr>
-                <td colSpan={15} className="px-4 py-12 text-center text-sm font-medium text-gray-500">
+                <td colSpan={14} className="px-4 py-12 text-center text-sm font-medium text-gray-500">
                   {tableMessage}
                 </td>
               </tr>
@@ -678,10 +665,6 @@ export function TrailingReturnsTable() {
 
                   <td className="px-2.5 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
                     {formatAum(fund.aum_crore)}
-                  </td>
-
-                  <td className="px-2 py-3 text-right text-gray-700 whitespace-nowrap">
-                    {formatFixed(fund.ber_percent)}
                   </td>
 
                   <td className="px-2 py-3 text-right text-gray-700 whitespace-nowrap border-r border-gray-100">

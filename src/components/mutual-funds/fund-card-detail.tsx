@@ -200,7 +200,7 @@ export function FundCardDetail({ initialScheme }: FundCardDetailProps) {
         <div className="p-2 border-r border-[#faeed6] last:border-none">
           <p className="text-[11px] font-semibold text-[#8a5b15]">Expense Ratio</p>
           <p className="text-xs font-bold text-[#8a5b15] mt-1">
-            BER: {fund.ber.toFixed(2)}% | TER: {fund.ter}%
+            TER: {fund.ter}%
           </p>
         </div>
 

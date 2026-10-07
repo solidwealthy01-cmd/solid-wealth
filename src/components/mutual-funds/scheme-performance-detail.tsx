@@ -110,7 +110,6 @@ export function SchemePerformanceDetail({ category, scheme, period }: SchemePerf
           nav: String(analytics.nav.value),
           launch_date: analytics.history.firstDate,
           aum_crore: null,
-          ber_percent: null,
           ter_percent: null,
           rating: null,
           mean: null,
@@ -309,7 +308,7 @@ export function SchemePerformanceDetail({ category, scheme, period }: SchemePerf
             <StripItem label="Launch Date" value={formatDate(fund.launch_date || linked?.history.firstDate)} />
             <StripItem
               label="Expense Ratio"
-              value={fund.ber_percent || fund.ter_percent ? `BER ${formatFixed(fund.ber_percent)}% | TER ${formatFixed(fund.ter_percent)}%` : "-"}
+              value={fund.ter_percent ? `${formatFixed(fund.ter_percent)}%` : "-"}
             />
             <StripItem
               label="Volatility (3Y, annualised)"

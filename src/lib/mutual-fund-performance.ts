@@ -28,7 +28,6 @@ export type FundPerformance = {
   nav: string | null;
   launch_date: string | null;
   aum_crore: string | null;
-  ber_percent: string | null;
   ter_percent: string | null;
   rating: string | null;
   mean: string | null;
