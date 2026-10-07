@@ -7,6 +7,7 @@ import { ChevronDown, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { navLinks } from "@/lib/content";
 import { courseLevels } from "@/lib/course-curriculum";
+import { appLinks } from "@/lib/app-links";
 import { cn } from "@/lib/utils";
 const researchLevelLinks = courseLevels.map((level) => {
     const [firstModule, lastModule] = level.moduleRange;
@@ -290,7 +291,7 @@ export function Navbar() {
           
           <div className="flex items-center gap-3">
             <div className="hidden xl:block">
-              <a href="https://play.google.com/store/apps/details?id=in.mymfbox" target="_blank" rel="noopener noreferrer" className="no-underline">
+              <a href={appLinks.android} target="_blank" rel="noopener noreferrer" className="no-underline">
                 <Button aria-label="Get started with Solid Wealth" variant="black" className={cn("get-started rounded-full bg-[#050505] text-white font-semibold cursor-pointer border-0 transition-all duration-300 inline-flex items-center justify-center gap-2 shrink-0", isScrolled ? "h-10 px-5 text-sm" : "py-[12px] px-[22px] text-[14px]")}>
                   <span>Get Started</span>
                 </Button>
@@ -383,7 +384,7 @@ export function Navbar() {
             </div>
 
             <div className="my-1 h-px w-full bg-[#eeeeee]"/>
-            <a href="https://play.google.com/store/apps/details?id=in.mymfbox" target="_blank" rel="noopener noreferrer" className="w-full no-underline" onClick={() => {
+            <a href={appLinks.android} target="_blank" rel="noopener noreferrer" className="w-full no-underline" onClick={() => {
                 setIsMobileMenuOpen(false);
                 setIsMobileResearchOpen(false);
             }}>

@@ -5,6 +5,7 @@ import { ArrowRight, ChevronDown } from "lucide-react";
 import { HeroPhone } from "@/components/sections/hero-phone";
 import { Button } from "@/components/ui/button";
 import { SplitText } from "@/components/ui/split-text";
+import { appLinks } from "@/lib/app-links";
 import { cn } from "@/lib/utils";
 export function HeroSection() {
     const SCROLL_TRACK_HEIGHT = "260vh";
@@ -316,7 +317,7 @@ export function HeroSection() {
               <SplitText text="Experience next-generation wealth management. Transparent, secure, and designed for the modern investor who values clarity over complexity." className="max-w-[460px] text-[17px] leading-relaxed text-[#3F3820] [@media(max-height:700px)]:max-w-[390px] [@media(max-height:700px)]:text-[14px] [@media(max-height:700px)]:leading-[1.55]" delay={20} duration={0.6} ease="power3.out" splitType="words" from={{ opacity: 0, y: 15 }} to={{ opacity: 1, y: 0 }} threshold={0.1} textAlign="left" trigger={isRevealed}/>
 
               <div className="flex animate-fade-up flex-wrap gap-3 [animation-delay:300ms] justify-start">
-                <a href="https://play.google.com/store/apps/details?id=in.mymfbox" target="_blank" rel="noopener noreferrer" className="no-underline">
+                <a href={appLinks.android} target="_blank" rel="noopener noreferrer" className="no-underline">
                   <Button variant="black" className="group relative overflow-hidden [@media(max-height:700px)]:h-11 [@media(max-height:700px)]:px-5 [@media(max-height:700px)]:text-sm" icon={<ArrowRight aria-hidden="true" className="size-4 transition-transform duration-200 group-hover:translate-x-1 relative z-10"/>} size="lg">
                     <span className="absolute right-0 -mt-12 h-32 w-8 translate-x-12 rotate-12 bg-white opacity-20 transition-all duration-1000 ease-out group-hover:-translate-x-56 pointer-events-none z-0"/>
                     <span className="relative z-10">Get Started</span>
