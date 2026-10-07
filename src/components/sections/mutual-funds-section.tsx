@@ -119,6 +119,16 @@ function formatDate(iso: string | null) {
 function shortOption(option: string) {
     return option.replace(/\s*option$/i, "").trim();
 }
+
+function shuffleFunds(list: Fund[]): Fund[] {
+    const arr = [...list];
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
 export function MutualFundsSection() {
     const [allFunds, setAllFunds] = useState<Fund[]>([]);
     const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
@@ -138,7 +148,8 @@ export function MutualFundsSection() {
                 const data: ApiResponse = await res.json();
                 if (controller.signal.aborted)
                     return;
-                setAllFunds(data.results.flatMap((company) => company.nav.map((scheme) => toFund(company, scheme))));
+                const flattened = data.results.flatMap((company) => company.nav.map((scheme) => toFund(company, scheme)));
+                setAllFunds(shuffleFunds(flattened));
                 setStatus("ready");
             }
             catch (err) {
