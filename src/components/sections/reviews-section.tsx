@@ -58,10 +58,13 @@ export function ReviewsSection() {
         useRef<HTMLDivElement>(null),
         useRef<HTMLDivElement>(null),
     ];
+    const isFloatingRef = useRef(false);
     const floatTweens = useRef<gsap.core.Tween[]>([]);
+
     const startFloating = () => {
-        if (floatTweens.current.length > 0)
+        if (isFloatingRef.current)
             return;
+        isFloatingRef.current = true;
         floatTweens.current = [
             gsap.to(floatRefs[0].current, {
                 y: -12,
@@ -88,23 +91,25 @@ export function ReviewsSection() {
             }),
         ];
     };
+
     const stopFloating = () => {
+        if (!isFloatingRef.current && floatTweens.current.length === 0)
+            return;
+        isFloatingRef.current = false;
         floatTweens.current.forEach((t) => t.kill());
         floatTweens.current = [];
         floatRefs.forEach((ref) => {
             if (ref.current) {
-                gsap.to(ref.current, {
-                    y: 0,
-                    duration: 0.4,
-                    ease: "power1.out",
-                });
+                gsap.set(ref.current, { y: 0 });
             }
         });
     };
+
     useGSAP(() => {
         const cards = cardRefs.map((r) => r.current);
         const initialRotations = [-8, -2, 8];
         const mm = gsap.matchMedia();
+
         mm.add("(min-width: 768px)", () => {
             const calculateOffsets = () => {
                 gsap.set(cards, { clearProps: "all" });
@@ -129,8 +134,10 @@ export function ReviewsSection() {
                     };
                 });
             };
+
             let offsets = calculateOffsets();
             let tl: gsap.core.Timeline;
+
             const buildAnimation = () => {
                 if (tl)
                     tl.kill();
@@ -148,6 +155,7 @@ export function ReviewsSection() {
                         transformOrigin: "center bottom",
                     });
                 });
+
                 tl = gsap.timeline({
                     scrollTrigger: {
                         trigger: containerRef.current,
@@ -155,20 +163,22 @@ export function ReviewsSection() {
                         end: "+=100%",
                         pin: true,
                         anticipatePin: 1,
-                        scrub: 1.2,
+                        scrub: 0.6,
+                        fastScrollEnd: true,
                         invalidateOnRefresh: true,
                         onUpdate: (self) => {
-                            if (self.progress < 0.98) {
+                            if (self.progress >= 0.98) {
+                                startFloating();
+                            } else {
                                 stopFloating();
                             }
                         },
-                        onToggle: (self) => {
-                            if (self.isActive && self.progress > 0.98) {
-                                startFloating();
-                            }
+                        onLeaveBack: () => {
+                            stopFloating();
                         },
                     },
                 });
+
                 const liftStart = 0.2;
                 tl.addLabel("lift", liftStart);
                 const offset2 = offsets[1] || { x: 0, y: 0 };
@@ -217,18 +227,27 @@ export function ReviewsSection() {
                     ease: "power2.out",
                 }, "lift+=1.5");
             };
+
             buildAnimation();
+
+            let resizeTimer: ReturnType<typeof setTimeout> | null = null;
             const handleResize = () => {
-                offsets = calculateOffsets();
-                buildAnimation();
+                if (resizeTimer) clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => {
+                    offsets = calculateOffsets();
+                    buildAnimation();
+                }, 150);
             };
+
             window.addEventListener("resize", handleResize);
             return () => {
+                if (resizeTimer) clearTimeout(resizeTimer);
                 window.removeEventListener("resize", handleResize);
                 if (tl)
                     tl.kill();
             };
         });
+
         mm.add("(max-width: 767px)", () => {
             stopFloating();
             gsap.set(cards, { clearProps: "all" });
@@ -236,6 +255,7 @@ export function ReviewsSection() {
                 gsap.set(envelopeRef.current, { clearProps: "all" });
             }
         });
+
         return () => {
             mm.revert();
             stopFloating();
@@ -276,8 +296,8 @@ export function ReviewsSection() {
                     ? "z-22"
                     : "z-21";
             return (<div key={review.id} className="relative h-[360px] md:h-[340px] lg:h-[360px]">
-                <div ref={cardRefs[idx]} className={cn("absolute inset-0 w-full h-full", zIndexClass)} style={{ willChange: "transform, opacity" }}>
-                  <div ref={floatRefs[idx]} className="w-full h-full" style={{ willChange: "transform" }}>
+                <div ref={cardRefs[idx]} className={cn("absolute inset-0 w-full h-full", zIndexClass)} style={{ willChange: "transform, opacity", transform: "translate3d(0,0,0)", backfaceVisibility: "hidden" }}>
+                  <div ref={floatRefs[idx]} className="w-full h-full" style={{ willChange: "transform", transform: "translate3d(0,0,0)", backfaceVisibility: "hidden" }}>
                     <ReviewCard review={review}/>
                   </div>
                 </div>
@@ -324,7 +344,7 @@ export function ReviewsSection() {
 function ReviewCard({ review }: {
     review: Review;
 }) {
-    return (<div className={cn("bg-white border border-[#EBEFF5] rounded-[32px] p-6 sm:p-8 lg:p-10 shadow-[0_8px_30px_rgb(15,26,44,0.04)]", "hover:shadow-[0_24px_50px_rgba(15,26,44,0.08)] hover:scale-[1.03] hover:-translate-y-1.5", "transition-all duration-300 ease-out cursor-pointer flex flex-col justify-between h-full w-full")}>
+    return (<div className={cn("bg-white border border-[#EBEFF5] rounded-[32px] p-6 sm:p-8 lg:p-10 shadow-[0_8px_30px_rgb(15,26,44,0.04)]", "hover:shadow-[0_24px_50px_rgba(15,26,44,0.08)]", "transition-shadow duration-300 ease-out cursor-pointer flex flex-col justify-between h-full w-full")}>
       
       <div className="flex items-center justify-between">
         
