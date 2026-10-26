@@ -136,11 +136,17 @@ export function ReviewsSection() {
             };
 
             let offsets = calculateOffsets();
-            let tl: gsap.core.Timeline;
+            let tl: gsap.core.Timeline | undefined;
+
+            // Killing the timeline alone leaves its pin-spacer wrapped around the
+            // section, so each rebuild nested another one. Revert the pin first.
+            const killTimeline = () => {
+                tl?.scrollTrigger?.kill(true);
+                tl?.kill();
+            };
 
             const buildAnimation = () => {
-                if (tl)
-                    tl.kill();
+                killTimeline();
                 stopFloating();
                 cards.forEach((card, idx) => {
                     if (!card)
@@ -243,8 +249,7 @@ export function ReviewsSection() {
             return () => {
                 if (resizeTimer) clearTimeout(resizeTimer);
                 window.removeEventListener("resize", handleResize);
-                if (tl)
-                    tl.kill();
+                killTimeline();
             };
         });
 
@@ -261,7 +266,10 @@ export function ReviewsSection() {
             stopFloating();
         };
     }, { scope: containerRef });
-    return (<section ref={containerRef} id="reviews" className="relative flex h-auto min-h-0 max-h-none w-full scroll-mt-24 flex-col items-center justify-between overflow-hidden bg-[#FFFDF4] pt-10 pb-0 md:h-[85vh] md:min-h-[680px] md:max-h-[850px]">
+    // GSAP pins the section by wrapping it in a pin-spacer. This wrapper is the
+    // node React removes on navigation, so it never has to find the moved section.
+    return (<div>
+      <section ref={containerRef} id="reviews" className="relative flex h-auto min-h-0 max-h-none w-full scroll-mt-24 flex-col items-center justify-between overflow-hidden bg-[#FFFDF4] pt-10 pb-0 md:h-[85vh] md:min-h-[680px] md:max-h-[850px]">
       
       <div className="absolute bottom-[-400px] left-1/2 -translate-x-1/2 w-[1400px] h-[1400px] bg-[#fe9800]/10 rounded-full blur-[160px] pointer-events-none z-0"/>
 
@@ -339,7 +347,8 @@ export function ReviewsSection() {
         </div>
 
       </div>
-    </section>);
+    </section>
+    </div>);
 }
 function ReviewCard({ review }: {
     review: Review;
