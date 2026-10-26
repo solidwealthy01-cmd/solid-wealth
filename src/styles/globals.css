@@ -65,6 +65,9 @@
   --animate-float-a: floatA 5s ease-in-out infinite;
   --animate-float-b: floatB 6.5s ease-in-out infinite;
   --animate-ticker: ticker 28s linear infinite;
+  --animate-hero-rise: heroRise 450ms cubic-bezier(0.2, 0, 0, 1) both;
+  --animate-hero-card-a: heroCardA 4s cubic-bezier(0.2, 0, 0, 1) infinite alternate;
+  --animate-hero-card-b: heroCardB 4.6s cubic-bezier(0.2, 0, 0, 1) infinite alternate;
   --animate-draw-line: drawLine 2s 0.5s cubic-bezier(0.22, 1, 0.36, 1)
     forwards;
 }
@@ -110,6 +113,35 @@ body {
   }
   50% {
     transform: translateY(-8px) rotate(-1deg);
+  }
+}
+
+@keyframes heroRise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes heroCardA {
+  from {
+    transform: rotate(-14deg) translateY(0);
+  }
+  to {
+    transform: rotate(-14deg) translateY(-10px);
+  }
+}
+
+@keyframes heroCardB {
+  from {
+    transform: rotate(-14deg) translateY(0);
+  }
+  to {
+    transform: rotate(-14deg) translateY(8px);
   }
 }
 
