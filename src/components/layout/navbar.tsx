@@ -163,7 +163,7 @@ export function Navbar() {
     return (<header className={cn("fixed inset-x-0 z-50 flex justify-center transition-all duration-500 ease-out", isScrolled ? "top-2 px-2 sm:top-4 sm:px-6" : "top-0 px-0 bg-transparent")}>
       <div className={cn("w-full transition-all duration-500 ease-out flex flex-col justify-center relative", isScrolled
             ? "max-w-[1050px] lg:max-w-[1280px] xl:max-w-[1360px] 2xl:max-w-[1440px] rounded-[16px] shadow-lg py-2.5 px-3.5 sm:py-3.5 sm:px-6 lg:px-8 bg-white/95 backdrop-blur-xl border border-gray-200"
-            : "max-w-full rounded-none py-3.5 px-4 sm:px-8 lg:px-10 xl:px-12 2xl:px-16 shadow-none bg-white border-b border-[#eeeeee]")}>
+            : "max-w-full rounded-none py-3.5 px-4 sm:px-8 lg:px-10 xl:px-12 2xl:px-16 shadow-none bg-transparent border-b border-transparent")}>
         <nav aria-label="Main navigation" className="flex h-[54px] w-full items-center justify-between sm:h-[62px]">
           
           <Link className={cn("flex min-w-0 items-center gap-2 whitespace-nowrap font-display font-extrabold tracking-normal text-[#ff8500] no-underline transition-all duration-500 hover:opacity-90", isScrolled ? "text-[19px] sm:text-xl" : "text-xl sm:text-[24px]")} style={{ fontFamily: "var(--font-righteous)" }} href="/" onClick={() => {

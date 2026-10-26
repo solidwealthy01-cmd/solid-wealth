@@ -59,10 +59,12 @@ function formatCurrency(val: number | null, unit: "INR" | "USD" | "points", deci
   })}`;
 }
 
-export async function fetchRawMarketSnapshot(): Promise<RawMarketSnapshot | null> {
+async function fetchBackendSnapshot(): Promise<RawMarketSnapshot | null> {
   try {
     const res = await fetch(`${API_BASE_URL}/api/market-snapshot/`, {
       next: { revalidate: 300 }, // Cache for 5 minutes
+      // A hung backend would otherwise hold the request until the platform times it out.
+      signal: AbortSignal.timeout(6000),
     });
     if (!res.ok) {
       console.error(`Failed to fetch backend market snapshot: ${res.status}`);
@@ -70,9 +72,85 @@ export async function fetchRawMarketSnapshot(): Promise<RawMarketSnapshot | null
     }
     return await res.json();
   } catch (err) {
-    console.error("Error fetching market snapshot from backend:", err);
+    console.error("Error fetching market snapshot from backend:", (err as Error).message);
     return null;
   }
+}
+
+// ---------- fallback: public market data, used only when the backend fails ----------
+// Yahoo Finance's chart endpoint (free, no key) for indices, metals, crude and
+// USD/INR, and CoinGecko for Bitcoin. Each value is fetched on its own, so one
+// missing figure drops just that item from the ticker.
+
+const TROY_OUNCE_GRAMS = 31.1034768;
+
+async function fetchYahooPrice(symbol: string): Promise<{ price: number; time: number } | null> {
+  try {
+    const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1d&interval=1d`, {
+      headers: { "User-Agent": "Mozilla/5.0" },
+      next: { revalidate: 300 },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!res.ok) return null;
+    const meta = (await res.json())?.chart?.result?.[0]?.meta;
+    const price = Number(meta?.regularMarketPrice);
+    return Number.isFinite(price) ? { price, time: Number(meta?.regularMarketTime) || 0 } : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchCoinGeckoBitcoinUsd(): Promise<number | null> {
+  try {
+    const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd", {
+      next: { revalidate: 300 },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!res.ok) return null;
+    const price = Number((await res.json())?.bitcoin?.usd);
+    return Number.isFinite(price) ? price : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchPublicSnapshot(): Promise<RawMarketSnapshot | null> {
+  const [nifty, sensex, gold, silver, crude, usdInr, btcYahoo, btcGecko] = await Promise.all([
+    fetchYahooPrice("^NSEI"),
+    fetchYahooPrice("^BSESN"),
+    fetchYahooPrice("GC=F"),
+    fetchYahooPrice("SI=F"),
+    fetchYahooPrice("CL=F"),
+    fetchYahooPrice("USDINR=X"),
+    fetchYahooPrice("BTC-USD"),
+    fetchCoinGeckoBitcoinUsd(),
+  ]);
+  const quotes = [nifty, sensex, gold, silver, crude, usdInr, btcYahoo];
+  const bitcoin = btcGecko ?? btcYahoo?.price ?? null;
+  if (quotes.every((q) => q === null) && bitcoin === null) return null;
+
+  const str = (n: number | null | undefined) => (n === null || n === undefined ? null : String(n));
+  // The backend stores metals in USD per gram; Yahoo quotes USD per troy ounce.
+  const perGram = (q: { price: number } | null) => (q ? q.price / TROY_OUNCE_GRAMS : null);
+  const latest = Math.max(0, ...quotes.map((q) => q?.time ?? 0));
+  return {
+    snapshot_date: (latest ? new Date(latest * 1000) : new Date()).toISOString().slice(0, 10),
+    gold_price: str(perGram(gold)),
+    silver_price: str(perGram(silver)),
+    crude_oil_price: str(crude?.price),
+    bitcoin_price: str(bitcoin),
+    nifty_50_value: str(nifty?.price),
+    sensex_value: str(sensex?.price),
+    usd_inr_rate: str(usdInr?.price),
+  };
+}
+
+export async function fetchRawMarketSnapshot(): Promise<RawMarketSnapshot | null> {
+  const backend = await fetchBackendSnapshot();
+  if (backend) return backend;
+  const fallback = await fetchPublicSnapshot();
+  if (fallback) console.warn("Market snapshot served from public market data");
+  return fallback;
 }
 
 export async function getFilteredMarketSnapshot(): Promise<FilteredMarketResponse | null> {

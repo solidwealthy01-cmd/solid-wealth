@@ -1,40 +1,22 @@
 "use client";
 import { useEffect, useState } from "react";
-import { API_BASE_URL } from "@/lib/api-config";
-// Shape of /api/market-snapshot/. DRF serialises decimals as strings.
-interface MarketSnapshot {
-    snapshot_date: string;
-    gold_price: string | null;
-    silver_price: string | null;
-    crude_oil_price: string | null;
-    bitcoin_price: string | null;
-    nifty_50_value: string | null;
-    sensex_value: string | null;
-    usd_inr_rate: string | null;
-}
+import type { FilteredMarketResponse } from "@/lib/market-snapshot";
 interface TickerItem {
     name: string;
     value: string;
 }
-function toNumber(value: string | null) {
-    if (value === null || value === "")
-        return null;
-    const num = Number(value);
-    return Number.isFinite(num) ? num : null;
-}
-function buildTickerItems(snapshot: MarketSnapshot): TickerItem[] {
-    const usdInr = toNumber(snapshot.usd_inr_rate);
-    // Gold and silver are stored in USD per gram. Convert them with the same
-    // snapshot's rate so a dollar figure is never shown with a rupee sign.
-    const inrPerGram = (usdPerGram: number | null) => usdPerGram === null || usdInr === null ? null : usdPerGram * usdInr;
+function buildTickerItems(snapshot: FilteredMarketResponse): TickerItem[] {
+    // Gold and silver per gram in rupees, converted server-side with the same
+    // snapshot's USD/INR rate so a dollar figure is never shown with a rupee sign.
+    const num = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : null;
     const metrics: Array<[string, number | null, "INR" | "USD" | "points"]> = [
-        ["Gold (per g)", inrPerGram(toNumber(snapshot.gold_price)), "INR"],
-        ["Silver (per g)", inrPerGram(toNumber(snapshot.silver_price)), "INR"],
-        ["NIFTY 50", toNumber(snapshot.nifty_50_value), "points"],
-        ["SENSEX", toNumber(snapshot.sensex_value), "points"],
-        ["USD/INR", usdInr, "INR"],
-        ["Crude Oil", toNumber(snapshot.crude_oil_price), "USD"],
-        ["Bitcoin", toNumber(snapshot.bitcoin_price), "USD"],
+        ["Gold (per g)", num(snapshot.metals.gold.details?.inr_per_gram), "INR"],
+        ["Silver (per g)", num(snapshot.metals.silver.details?.inr_per_gram), "INR"],
+        ["NIFTY 50", num(snapshot.indices.nifty_50.value), "points"],
+        ["SENSEX", num(snapshot.indices.sensex.value), "points"],
+        ["USD/INR", num(snapshot.macro.usd_inr.value), "INR"],
+        ["Crude Oil", num(snapshot.macro.crude_oil.value), "USD"],
+        ["Bitcoin", num(snapshot.crypto.bitcoin.value), "USD"],
     ];
     return metrics.flatMap(([name, value, unit]) => value === null
         ? []
@@ -52,14 +34,12 @@ export function MarketTicker() {
         const controller = new AbortController();
         const fetchMarketSnapshot = async () => {
             try {
-                const res = await fetch(`${API_BASE_URL}/api/market-snapshot/`, { signal: controller.signal });
-                // 404 means no snapshot has been stored yet, which is a normal
-                // state (e.g. a fresh local database), not a failure.
-                if (res.status === 404)
-                    return;
+                // The app's own route: it reads the backend and falls back to
+                // public market data when the backend is down.
+                const res = await fetch("/api/market-snapshot", { signal: controller.signal });
                 if (!res.ok)
                     throw new Error(`Market snapshot request failed with ${res.status}`);
-                const data: MarketSnapshot = await res.json();
+                const data: FilteredMarketResponse = await res.json();
                 if (controller.signal.aborted)
                     return;
                 setItems(buildTickerItems(data));
